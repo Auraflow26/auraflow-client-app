@@ -4,6 +4,7 @@ import { ArrowLeft, Phone, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/layout/DashboardShell'
 import { Badge } from '@/components/ui/Badge'
+import { LeadStatusUpdate } from './LeadStatusUpdate'
 import {
   formatCurrency,
   formatDate,
@@ -131,6 +132,10 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
                 ))}
               </div>
             </div>
+          </section>
+
+          <section>
+            <LeadStatusUpdate leadId={lead.id} currentStatus={lead.status} />
           </section>
 
           {lead.notes && (

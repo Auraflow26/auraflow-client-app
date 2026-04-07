@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { ScoreGauge } from '@/components/ui/ScoreGauge'
 import { LeadTrend } from '@/components/charts/LeadTrend'
 import { SourceBreakdown } from '@/components/charts/SourceBreakdown'
+import { ScoreHistory } from '@/components/charts/ScoreHistory'
 import { cn, formatCurrency, formatDuration, formatPercent } from '@/lib/utils'
 import type { ClientProfile, DailyMetrics, Lead, LeadSource } from '@/lib/types'
 
@@ -76,6 +77,7 @@ export function ReportsView({ profile, metrics, leadSources }: Props) {
           {(['week', 'month', 'quarter'] as Period[]).map((p) => (
             <button
               key={p}
+              type="button"
               onClick={() => setPeriod(p)}
               className={cn(
                 'rounded-pill border px-4 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors',
@@ -129,6 +131,23 @@ export function ReportsView({ profile, metrics, leadSources }: Props) {
         <MetricRow label="Avg rating" value={`${agg.avgRating.toFixed(2)} ★`} />
         <MetricRow label="Response rate" value={formatPercent(responseRate, 0)} />
       </Section>
+
+      <section>
+        <div className="mb-3 font-mono text-[10px] uppercase tracking-wider text-gold">
+          Foundation Score trend
+        </div>
+        <div className="rounded-card border border-border bg-bg-card p-4">
+          {windowed.some((m) => m.foundation_score) ? (
+            <ScoreHistory
+              data={windowed
+                .filter((m) => m.foundation_score)
+                .map((m) => ({ date: m.date, score: m.foundation_score }))}
+            />
+          ) : (
+            <div className="py-8 text-center text-sm text-text-muted">No score history yet.</div>
+          )}
+        </div>
+      </section>
 
       <section>
         <div className="mb-3 font-mono text-[10px] uppercase tracking-wider text-gold">

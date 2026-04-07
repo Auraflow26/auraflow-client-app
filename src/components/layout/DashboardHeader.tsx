@@ -19,7 +19,7 @@ export function DashboardHeader({ title, subtitle }: DashboardHeaderProps) {
           {subtitle && <div className="truncate text-xs text-text-muted">{subtitle}</div>}
         </div>
         <Link
-          href="/settings"
+          href="/notifications"
           className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border text-text-secondary transition-colors hover:border-border-active hover:text-text-primary"
           aria-label="Notifications"
         >

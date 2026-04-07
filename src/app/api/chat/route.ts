@@ -1,13 +1,6 @@
-import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import type {
-  ClientProfile,
-  DailyMetrics,
-  Lead,
-  AgentActivity,
-  ChatMessage,
-} from '@/lib/types'
+import type { ClientProfile, DailyMetrics, Lead, AgentActivity, ChatMessage } from '@/lib/types'
 
 export const runtime = 'nodejs'
 
@@ -17,19 +10,19 @@ export async function POST(request: Request) {
   try {
     const { message } = await request.json()
     if (!message || typeof message !== 'string') {
-      return NextResponse.json({ error: 'Missing message' }, { status: 400 })
+      return Response.json({ error: 'Missing message' }, { status: 400 })
     }
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile } = await supabase
       .from('client_profiles')
       .select('*')
       .eq('user_id', user.id)
       .single<ClientProfile>()
-    if (!profile) return NextResponse.json({ error: 'No profile' }, { status: 404 })
+    if (!profile) return Response.json({ error: 'No profile' }, { status: 404 })
 
     const thirty = new Date()
     thirty.setDate(thirty.getDate() - 30)
@@ -95,11 +88,12 @@ export async function POST(request: Request) {
 CURRENT METRICS (last 30 days):
 - Leads captured: ${agg.leads}
 - Leads won: ${agg.won}
+- Close rate: ${agg.leads > 0 ? ((agg.won / agg.leads) * 100).toFixed(1) : 'n/a'}%
 - Avg response time: ${avgResponse ?? 'n/a'} seconds
 - Ad spend: $${agg.adSpend.toFixed(2)} | Revenue attributed: $${agg.adRevenue.toFixed(2)}
 - ROAS: ${agg.adSpend > 0 ? (agg.adRevenue / agg.adSpend).toFixed(2) : 'n/a'}x
 - Admin hours saved: ${agg.adminHours.toFixed(1)}
-- Google reviews: ${totalReviews} (avg ${avgRating ?? 'n/a'} stars, ${agg.reviewsReceived} new this month)
+- Google reviews: ${totalReviews} total (avg ${avgRating ?? 'n/a'} stars, ${agg.reviewsReceived} new this month)
 - Foundation Score: ${foundationScore ?? 'n/a'}/100
 
 RECENT LEADS (most recent first):
@@ -121,28 +115,63 @@ RULES:
       content: m.content,
     }))
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [...prior, { role: 'user', content: message }],
+    // Stream the response
+    const encoder = new TextEncoder()
+    let fullText = ''
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          const stream = anthropic.messages.stream({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: [...prior, { role: 'user', content: message }],
+          })
+
+          for await (const chunk of stream) {
+            if (
+              chunk.type === 'content_block_delta' &&
+              chunk.delta.type === 'text_delta'
+            ) {
+              const text = chunk.delta.text
+              fullText += text
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ delta: text })}\n\n`)
+              )
+            }
+          }
+
+          // Save both messages after stream completes
+          await supabase.from('chat_messages').insert([
+            { client_id: profile.client_id, role: 'user', content: message, metadata: {} },
+            {
+              client_id: profile.client_id,
+              role: 'assistant',
+              content: fullText || 'I had trouble generating a response. Please try again.',
+              metadata: {},
+            },
+          ])
+
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'Unknown error'
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+        } finally {
+          controller.close()
+        }
+      },
     })
 
-    const reply =
-      response.content
-        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n')
-        .trim() || 'I had trouble generating a response. Please try again.'
-
-    await supabase.from('chat_messages').insert([
-      { client_id: profile.client_id, role: 'user', content: message, metadata: {} },
-      { client_id: profile.client_id, role: 'assistant', content: reply, metadata: {} },
-    ])
-
-    return NextResponse.json({ reply })
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Unknown error'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return Response.json({ error: msg }, { status: 500 })
   }
 }

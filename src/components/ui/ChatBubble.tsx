@@ -1,7 +1,12 @@
 import { cn } from '@/lib/utils'
 import type { ChatMessage } from '@/lib/types'
 
-export function ChatBubble({ message }: { message: ChatMessage }) {
+interface Props {
+  message: ChatMessage
+  onAction?: (action: string) => void
+}
+
+export function ChatBubble({ message, onAction }: Props) {
   const isUser = message.role === 'user'
   return (
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
@@ -19,6 +24,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
             {message.metadata.actions.map((a, i) => (
               <button
                 key={i}
+                onClick={() => onAction?.(a.label)}
                 className="rounded-pill border border-border-active bg-accent-glow px-3 py-1 text-xs font-medium text-accent-bright transition-colors hover:bg-accent hover:text-white"
               >
                 {a.label}

@@ -33,7 +33,7 @@ export default async function HomePage() {
       .select('*')
       .eq('client_id', profile.client_id)
       .order('date', { ascending: false })
-      .limit(7)
+      .limit(8)
       .returns<DailyMetrics[]>(),
     supabase
       .from('agent_activity')
@@ -44,14 +44,16 @@ export default async function HomePage() {
       .returns<AgentActivity[]>(),
   ])
 
+  // latest = today, prev = yesterday (for trends)
   const latest = metricsToday ?? recentMetrics?.[0] ?? null
+  const prev = recentMetrics?.[1] ?? null
   const first = profile.contact_name.split(' ')[0]
 
   return (
     <>
       <DashboardHeader title={greeting(first)} subtitle={profile.business_name} />
       <DashboardShell>
-        <PulseView metrics={latest} activity={activity ?? []} />
+        <PulseView metrics={latest} prevMetrics={prev} activity={activity ?? []} />
       </DashboardShell>
     </>
   )
