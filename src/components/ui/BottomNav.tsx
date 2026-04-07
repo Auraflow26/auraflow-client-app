@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Users, BarChart3, MessageSquare, Menu } from 'lucide-react'
+import { Home, Users, BarChart3, MessageSquare, GitBranch } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
-  { href: '/', label: 'Home', icon: Home, match: (p: string) => p === '/' },
-  { href: '/leads', label: 'Leads', icon: Users, match: (p: string) => p.startsWith('/leads') },
-  { href: '/reports', label: 'Reports', icon: BarChart3, match: (p: string) => p.startsWith('/reports') },
-  { href: '/chat', label: 'Chat', icon: MessageSquare, match: (p: string) => p.startsWith('/chat') },
-  { href: '/settings', label: 'More', icon: Menu, match: (p: string) => p.startsWith('/settings') || p.startsWith('/agents') },
+  { href: '/',          label: 'Home',    icon: Home,          match: (p: string) => p === '/' },
+  { href: '/leads',     label: 'Leads',   icon: Users,         match: (p: string) => p.startsWith('/leads') },
+  { href: '/reports',   label: 'Reports', icon: BarChart3,     match: (p: string) => p.startsWith('/reports') },
+  { href: '/chat',      label: 'Chat',    icon: MessageSquare, match: (p: string) => p.startsWith('/chat') },
+  { href: '/hierarchy', label: 'System',  icon: GitBranch,     match: (p: string) => p.startsWith('/hierarchy') || p.startsWith('/agents') || p.startsWith('/settings') },
 ]
 
 export function BottomNav() {
