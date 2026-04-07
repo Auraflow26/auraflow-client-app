@@ -1,0 +1,148 @@
+{
+  "name": "AF-APP — Lead Follow-up Sequence",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "name": "Every 15 Minutes"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "clients",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "status=eq.active",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [480, 300],
+      "name": "Get Active Clients",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\nconst now = new Date();\nconst twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);\n\nfor (const item of items) {\n  const clientId = item.json.id;\n  \n  // Find leads that need follow-up: stage < 3 and not updated in 24+ hours\n  const leads = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/lead_interactions?client_id=eq.${clientId}&stage=lt.3&updated_at=lt.${twentyFourHoursAgo.toISOString()}&select=id,client_id,lead_name,lead_email,stage,score,source`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n    }\n  });\n  \n  if (leads && leads.length > 0) {\n    for (const lead of leads) {\n      results.push({ json: lead });\n    }\n  }\n}\n\nif (results.length === 0) {\n  results.push({ json: { _skip: true } });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "name": "Find Leads Needing Follow-up"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  if (item.json._skip) continue;\n  \n  const leadId = item.json.id;\n  const newStage = (item.json.stage || 0) + 1;\n  \n  // PATCH the lead to advance follow-up stage\n  await this.helpers.httpRequest({\n    method: 'PATCH',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/lead_interactions?id=eq.${leadId}`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=representation'\n    },\n    body: {\n      stage: newStage,\n      updated_at: new Date().toISOString()\n    }\n  });\n  \n  results.push({\n    json: {\n      client_id: item.json.client_id,\n      lead_id: leadId,\n      lead_name: item.json.lead_name,\n      previous_stage: item.json.stage,\n      new_stage: newStage\n    }\n  });\n}\n\nif (results.length === 0) {\n  results.push({ json: { _skip: true } });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300],
+      "name": "Advance Follow-up Stage"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "agent_activity",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "agent_name",
+              "fieldValue": "Orion"
+            },
+            {
+              "fieldName": "action",
+              "fieldValue": "lead_followup"
+            },
+            {
+              "fieldName": "description",
+              "fieldValue": "=Advanced {{ $json.lead_name }} from stage {{ $json.previous_stage }} to stage {{ $json.new_stage }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1140, 300],
+      "name": "Log Orion Follow-up",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Active Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Clients": {
+      "main": [
+        [
+          {
+            "node": "Find Leads Needing Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Leads Needing Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Advance Follow-up Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advance Follow-up Stage": {
+      "main": [
+        [
+          {
+            "node": "Log Orion Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

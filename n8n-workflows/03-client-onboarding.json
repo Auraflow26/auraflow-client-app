@@ -1,0 +1,277 @@
+{
+  "name": "AF-APP — Client Onboarding",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "af-app/client-onboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "name": "Onboarding Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "clients",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "business_name",
+              "fieldValue": "={{ $json.body.business_name }}"
+            },
+            {
+              "fieldName": "owner_name",
+              "fieldValue": "={{ $json.body.owner_name }}"
+            },
+            {
+              "fieldName": "owner_email",
+              "fieldValue": "={{ $json.body.owner_email }}"
+            },
+            {
+              "fieldName": "industry",
+              "fieldValue": "={{ $json.body.industry }}"
+            },
+            {
+              "fieldName": "timezone",
+              "fieldValue": "={{ $json.body.timezone || 'America/New_York' }}"
+            },
+            {
+              "fieldName": "status",
+              "fieldValue": "active"
+            },
+            {
+              "fieldName": "plan",
+              "fieldValue": "={{ $json.body.plan || 'starter' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [480, 300],
+      "name": "Create Client Record",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const clientRecord = $input.first().json;\nconst email = clientRecord.owner_email;\n\n// Create Supabase auth user via Admin API\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://bfzdcyuyilesubtgbhdc.supabase.co/auth/v1/admin/users',\n  headers: {\n    'apikey': $env.SUPABASE_SERVICE_KEY,\n    'Authorization': `Bearer ${$env.SUPABASE_SERVICE_KEY}`,\n    'Content-Type': 'application/json'\n  },\n  body: {\n    email: email,\n    email_confirm: true,\n    user_metadata: {\n      client_id: clientRecord.id,\n      role: 'owner',\n      business_name: clientRecord.business_name\n    }\n  }\n});\n\nreturn [{\n  json: {\n    ...clientRecord,\n    auth_user_id: response.id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "name": "Invite User via Auth"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "client_profiles",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldName": "user_id",
+              "fieldValue": "={{ $json.auth_user_id }}"
+            },
+            {
+              "fieldName": "display_name",
+              "fieldValue": "={{ $json.owner_name }}"
+            },
+            {
+              "fieldName": "email",
+              "fieldValue": "={{ $json.owner_email }}"
+            },
+            {
+              "fieldName": "role",
+              "fieldValue": "owner"
+            },
+            {
+              "fieldName": "avatar_url",
+              "fieldValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [920, 300],
+      "name": "Create Client Profile",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "notifications",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "type",
+              "fieldValue": "system"
+            },
+            {
+              "fieldName": "title",
+              "fieldValue": "Welcome to AuraFlow"
+            },
+            {
+              "fieldName": "message",
+              "fieldValue": "=Your AuraFlow operating system is live. All 6 agents are online and working for {{ $('Create Client Record').item.json.business_name }}."
+            },
+            {
+              "fieldName": "read",
+              "fieldValue": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1140, 200],
+      "name": "Create Welcome Notification",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "agent_activity",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "agent_name",
+              "fieldValue": "Cyrus"
+            },
+            {
+              "fieldName": "action",
+              "fieldValue": "client_onboarded"
+            },
+            {
+              "fieldName": "description",
+              "fieldValue": "=New client onboarded: {{ $('Create Client Record').item.json.business_name }}. Auth user created and profile initialized."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1140, 400],
+      "name": "Log Cyrus Onboarding",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"message\": \"Client onboarded successfully\", \"client_id\": \"{{ $('Create Client Record').item.json.id }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1360, 400],
+      "name": "Respond OK"
+    }
+  ],
+  "connections": {
+    "Onboarding Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create Client Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Client Record": {
+      "main": [
+        [
+          {
+            "node": "Invite User via Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invite User via Auth": {
+      "main": [
+        [
+          {
+            "node": "Create Client Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Client Profile": {
+      "main": [
+        [
+          {
+            "node": "Create Welcome Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Cyrus Onboarding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Cyrus Onboarding": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

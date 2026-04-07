@@ -1,0 +1,195 @@
+{
+  "name": "AF-APP — Review Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "af-app/review-received",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "name": "Review Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "client_id",
+              "value": "={{ $json.body.client_id }}",
+              "type": "string"
+            },
+            {
+              "name": "platform",
+              "value": "={{ $json.body.platform }}",
+              "type": "string"
+            },
+            {
+              "name": "reviewer_name",
+              "value": "={{ $json.body.reviewer_name }}",
+              "type": "string"
+            },
+            {
+              "name": "rating",
+              "value": "={{ $json.body.rating }}",
+              "type": "number"
+            },
+            {
+              "name": "review_text",
+              "value": "={{ $json.body.review_text }}",
+              "type": "string"
+            },
+            {
+              "name": "review_url",
+              "value": "={{ $json.body.review_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [480, 300],
+      "name": "Map Review Data"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "agent_activity",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "agent_name",
+              "fieldValue": "Atlas"
+            },
+            {
+              "fieldName": "action",
+              "fieldValue": "review_received"
+            },
+            {
+              "fieldName": "description",
+              "fieldValue": "=New {{ $json.rating }}-star review on {{ $json.platform }} from {{ $json.reviewer_name }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [700, 200],
+      "name": "Log Atlas Review Activity",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "notifications",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "type",
+              "fieldValue": "review"
+            },
+            {
+              "fieldName": "title",
+              "fieldValue": "=New {{ $json.rating }}★ Review on {{ $json.platform }}"
+            },
+            {
+              "fieldName": "message",
+              "fieldValue": "={{ $json.reviewer_name }} left a {{ $json.rating }}-star review: \"{{ $json.review_text.substring(0, 120) }}...\""
+            },
+            {
+              "fieldName": "read",
+              "fieldValue": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [700, 400],
+      "name": "Create Review Notification",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"message\": \"Review logged successfully\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [920, 400],
+      "name": "Respond OK"
+    }
+  ],
+  "connections": {
+    "Review Webhook": {
+      "main": [
+        [
+          {
+            "node": "Map Review Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Review Data": {
+      "main": [
+        [
+          {
+            "node": "Log Atlas Review Activity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Review Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Review Notification": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

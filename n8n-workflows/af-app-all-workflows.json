@@ -1,0 +1,1633 @@
+[
+  {
+    "name": "AF-APP \u2014 Lead Capture Webhook",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "af-app/lead-capture",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          260,
+          300
+        ],
+        "name": "Lead Webhook"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "name": "client_id",
+                "value": "={{ $json.body.client_id }}",
+                "type": "string"
+              },
+              {
+                "name": "lead_name",
+                "value": "={{ $json.body.lead_name }}",
+                "type": "string"
+              },
+              {
+                "name": "lead_email",
+                "value": "={{ $json.body.lead_email }}",
+                "type": "string"
+              },
+              {
+                "name": "lead_phone",
+                "value": "={{ $json.body.lead_phone }}",
+                "type": "string"
+              },
+              {
+                "name": "source",
+                "value": "={{ $json.body.source }}",
+                "type": "string"
+              },
+              {
+                "name": "score",
+                "value": "={{ $json.body.score }}",
+                "type": "number"
+              },
+              {
+                "name": "stage",
+                "value": "new",
+                "type": "string"
+              },
+              {
+                "name": "notes",
+                "value": "={{ $json.body.notes }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          480,
+          300
+        ],
+        "name": "Map Lead Fields"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "lead_interactions",
+          "fieldsUi": {
+            "fieldValues": []
+          },
+          "options": {
+            "autoMapInputData": true
+          }
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          700,
+          300
+        ],
+        "name": "Insert Lead",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "agent_activity",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $('Map Lead Fields').item.json.client_id }}"
+              },
+              {
+                "fieldName": "agent_name",
+                "fieldValue": "Maven"
+              },
+              {
+                "fieldName": "action",
+                "fieldValue": "lead_captured"
+              },
+              {
+                "fieldName": "description",
+                "fieldValue": "=Captured new lead: {{ $('Map Lead Fields').item.json.lead_name }} (score: {{ $('Map Lead Fields').item.json.score }})"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          920,
+          200
+        ],
+        "name": "Log Maven Activity",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "leftValue": "={{ $('Map Lead Fields').item.json.score }}",
+                "rightValue": 80,
+                "operator": {
+                  "type": "number",
+                  "operation": "gte"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          920,
+          400
+        ],
+        "name": "Hot Lead?"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "notifications",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $('Map Lead Fields').item.json.client_id }}"
+              },
+              {
+                "fieldName": "type",
+                "fieldValue": "hot_lead"
+              },
+              {
+                "fieldName": "title",
+                "fieldValue": "=Hot Lead Alert: {{ $('Map Lead Fields').item.json.lead_name }}"
+              },
+              {
+                "fieldName": "message",
+                "fieldValue": "=New high-score lead ({{ $('Map Lead Fields').item.json.score }}) from {{ $('Map Lead Fields').item.json.source }}. Follow up recommended."
+              },
+              {
+                "fieldName": "read",
+                "fieldValue": "false"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          1140,
+          340
+        ],
+        "name": "Create Hot Lead Notification",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={ \"success\": true, \"message\": \"Lead captured successfully\" }",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1360,
+          400
+        ],
+        "name": "Respond OK"
+      }
+    ],
+    "connections": {
+      "Lead Webhook": {
+        "main": [
+          [
+            {
+              "node": "Map Lead Fields",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Map Lead Fields": {
+        "main": [
+          [
+            {
+              "node": "Insert Lead",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Insert Lead": {
+        "main": [
+          [
+            {
+              "node": "Log Maven Activity",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Hot Lead?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Hot Lead?": {
+        "main": [
+          [
+            {
+              "node": "Create Hot Lead Notification",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Hot Lead Notification": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    }
+  },
+  {
+    "name": "AF-APP \u2014 Nightly Metrics Rollup",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 0,
+                "triggerAtMinute": 0
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          260,
+          300
+        ],
+        "name": "Midnight Daily"
+      },
+      {
+        "parameters": {
+          "operation": "getAll",
+          "tableId": "clients",
+          "returnAll": true,
+          "filterType": "string",
+          "filterString": "status=eq.active",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "name": "Get Active Clients",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const clientId = item.json.id;\n  const today = new Date();\n  today.setHours(0, 0, 0, 0);\n  const yesterday = new Date(today);\n  yesterday.setDate(yesterday.getDate() - 1);\n  \n  const dateStr = yesterday.toISOString().split('T')[0];\n  \n  // Fetch leads created yesterday for this client\n  const leadsResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/lead_interactions?client_id=eq.${clientId}&created_at=gte.${yesterday.toISOString()}&created_at=lt.${today.toISOString()}&select=id,score,source`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n    }\n  });\n  \n  // Fetch agent activity yesterday\n  const activityResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/agent_activity?client_id=eq.${clientId}&created_at=gte.${yesterday.toISOString()}&created_at=lt.${today.toISOString()}&select=id,agent_name,action`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n    }\n  });\n  \n  const leads = leadsResponse || [];\n  const activities = activityResponse || [];\n  \n  const newLeads = leads.length;\n  const hotLeads = leads.filter(l => l.score >= 80).length;\n  const avgScore = leads.length > 0 \n    ? Math.round(leads.reduce((sum, l) => sum + (l.score || 0), 0) / leads.length) \n    : 0;\n  const agentActions = activities.length;\n  \n  results.push({\n    json: {\n      client_id: clientId,\n      date: dateStr,\n      new_leads: newLeads,\n      hot_leads: hotLeads,\n      avg_lead_score: avgScore,\n      agent_actions: agentActions,\n      total_conversations: 0,\n      ad_spend: 0,\n      ad_impressions: 0,\n      ad_clicks: 0\n    }\n  });\n}\n\nreturn results;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          700,
+          300
+        ],
+        "name": "Aggregate Daily Metrics"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "daily_metrics",
+          "fieldsUi": {
+            "fieldValues": []
+          },
+          "options": {
+            "autoMapInputData": true
+          }
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          920,
+          300
+        ],
+        "name": "Insert Daily Metrics",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "agent_activity",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "agent_name",
+                "fieldValue": "Cyrus"
+              },
+              {
+                "fieldName": "action",
+                "fieldValue": "nightly_rollup"
+              },
+              {
+                "fieldName": "description",
+                "fieldValue": "=Nightly metrics rollup completed for {{ $json.date }}. New leads: {{ $json.new_leads }}, Agent actions: {{ $json.agent_actions }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          1140,
+          300
+        ],
+        "name": "Log Cyrus Heartbeat",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Midnight Daily": {
+        "main": [
+          [
+            {
+              "node": "Get Active Clients",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Active Clients": {
+        "main": [
+          [
+            {
+              "node": "Aggregate Daily Metrics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregate Daily Metrics": {
+        "main": [
+          [
+            {
+              "node": "Insert Daily Metrics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Insert Daily Metrics": {
+        "main": [
+          [
+            {
+              "node": "Log Cyrus Heartbeat",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    }
+  },
+  {
+    "name": "AF-APP \u2014 Client Onboarding",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "af-app/client-onboard",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          260,
+          300
+        ],
+        "name": "Onboarding Webhook"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "clients",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "business_name",
+                "fieldValue": "={{ $json.body.business_name }}"
+              },
+              {
+                "fieldName": "owner_name",
+                "fieldValue": "={{ $json.body.owner_name }}"
+              },
+              {
+                "fieldName": "owner_email",
+                "fieldValue": "={{ $json.body.owner_email }}"
+              },
+              {
+                "fieldName": "industry",
+                "fieldValue": "={{ $json.body.industry }}"
+              },
+              {
+                "fieldName": "timezone",
+                "fieldValue": "={{ $json.body.timezone || 'America/New_York' }}"
+              },
+              {
+                "fieldName": "status",
+                "fieldValue": "active"
+              },
+              {
+                "fieldName": "plan",
+                "fieldValue": "={{ $json.body.plan || 'starter' }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "name": "Create Client Record",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const clientRecord = $input.first().json;\nconst email = clientRecord.owner_email;\n\n// Create Supabase auth user via Admin API\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://bfzdcyuyilesubtgbhdc.supabase.co/auth/v1/admin/users',\n  headers: {\n    'apikey': $env.SUPABASE_SERVICE_KEY,\n    'Authorization': `Bearer ${$env.SUPABASE_SERVICE_KEY}`,\n    'Content-Type': 'application/json'\n  },\n  body: {\n    email: email,\n    email_confirm: true,\n    user_metadata: {\n      client_id: clientRecord.id,\n      role: 'owner',\n      business_name: clientRecord.business_name\n    }\n  }\n});\n\nreturn [{\n  json: {\n    ...clientRecord,\n    auth_user_id: response.id\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          700,
+          300
+        ],
+        "name": "Invite User via Auth"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "client_profiles",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.id }}"
+              },
+              {
+                "fieldName": "user_id",
+                "fieldValue": "={{ $json.auth_user_id }}"
+              },
+              {
+                "fieldName": "display_name",
+                "fieldValue": "={{ $json.owner_name }}"
+              },
+              {
+                "fieldName": "email",
+                "fieldValue": "={{ $json.owner_email }}"
+              },
+              {
+                "fieldName": "role",
+                "fieldValue": "owner"
+              },
+              {
+                "fieldName": "avatar_url",
+                "fieldValue": ""
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          920,
+          300
+        ],
+        "name": "Create Client Profile",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "notifications",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "type",
+                "fieldValue": "system"
+              },
+              {
+                "fieldName": "title",
+                "fieldValue": "Welcome to AuraFlow"
+              },
+              {
+                "fieldName": "message",
+                "fieldValue": "=Your AuraFlow operating system is live. All 6 agents are online and working for {{ $('Create Client Record').item.json.business_name }}."
+              },
+              {
+                "fieldName": "read",
+                "fieldValue": "false"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          1140,
+          200
+        ],
+        "name": "Create Welcome Notification",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "agent_activity",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "agent_name",
+                "fieldValue": "Cyrus"
+              },
+              {
+                "fieldName": "action",
+                "fieldValue": "client_onboarded"
+              },
+              {
+                "fieldName": "description",
+                "fieldValue": "=New client onboarded: {{ $('Create Client Record').item.json.business_name }}. Auth user created and profile initialized."
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          1140,
+          400
+        ],
+        "name": "Log Cyrus Onboarding",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={ \"success\": true, \"message\": \"Client onboarded successfully\", \"client_id\": \"{{ $('Create Client Record').item.json.id }}\" }",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1360,
+          400
+        ],
+        "name": "Respond OK"
+      }
+    ],
+    "connections": {
+      "Onboarding Webhook": {
+        "main": [
+          [
+            {
+              "node": "Create Client Record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Client Record": {
+        "main": [
+          [
+            {
+              "node": "Invite User via Auth",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Invite User via Auth": {
+        "main": [
+          [
+            {
+              "node": "Create Client Profile",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Client Profile": {
+        "main": [
+          [
+            {
+              "node": "Create Welcome Notification",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Log Cyrus Onboarding",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log Cyrus Onboarding": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    }
+  },
+  {
+    "name": "AF-APP \u2014 Lead Follow-up Sequence",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 15
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          260,
+          300
+        ],
+        "name": "Every 15 Minutes"
+      },
+      {
+        "parameters": {
+          "operation": "getAll",
+          "tableId": "clients",
+          "returnAll": true,
+          "filterType": "string",
+          "filterString": "status=eq.active",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "name": "Get Active Clients",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst results = [];\nconst now = new Date();\nconst twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);\n\nfor (const item of items) {\n  const clientId = item.json.id;\n  \n  // Find leads that need follow-up: stage < 3 and not updated in 24+ hours\n  const leads = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/lead_interactions?client_id=eq.${clientId}&stage=lt.3&updated_at=lt.${twentyFourHoursAgo.toISOString()}&select=id,client_id,lead_name,lead_email,stage,score,source`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n    }\n  });\n  \n  if (leads && leads.length > 0) {\n    for (const lead of leads) {\n      results.push({ json: lead });\n    }\n  }\n}\n\nif (results.length === 0) {\n  results.push({ json: { _skip: true } });\n}\n\nreturn results;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          700,
+          300
+        ],
+        "name": "Find Leads Needing Follow-up"
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  if (item.json._skip) continue;\n  \n  const leadId = item.json.id;\n  const newStage = (item.json.stage || 0) + 1;\n  \n  // PATCH the lead to advance follow-up stage\n  await this.helpers.httpRequest({\n    method: 'PATCH',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/lead_interactions?id=eq.${leadId}`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=representation'\n    },\n    body: {\n      stage: newStage,\n      updated_at: new Date().toISOString()\n    }\n  });\n  \n  results.push({\n    json: {\n      client_id: item.json.client_id,\n      lead_id: leadId,\n      lead_name: item.json.lead_name,\n      previous_stage: item.json.stage,\n      new_stage: newStage\n    }\n  });\n}\n\nif (results.length === 0) {\n  results.push({ json: { _skip: true } });\n}\n\nreturn results;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          920,
+          300
+        ],
+        "name": "Advance Follow-up Stage"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "agent_activity",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "agent_name",
+                "fieldValue": "Orion"
+              },
+              {
+                "fieldName": "action",
+                "fieldValue": "lead_followup"
+              },
+              {
+                "fieldName": "description",
+                "fieldValue": "=Advanced {{ $json.lead_name }} from stage {{ $json.previous_stage }} to stage {{ $json.new_stage }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          1140,
+          300
+        ],
+        "name": "Log Orion Follow-up",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Every 15 Minutes": {
+        "main": [
+          [
+            {
+              "node": "Get Active Clients",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Active Clients": {
+        "main": [
+          [
+            {
+              "node": "Find Leads Needing Follow-up",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find Leads Needing Follow-up": {
+        "main": [
+          [
+            {
+              "node": "Advance Follow-up Stage",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Advance Follow-up Stage": {
+        "main": [
+          [
+            {
+              "node": "Log Orion Follow-up",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    }
+  },
+  {
+    "name": "AF-APP \u2014 Lead Status Update",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "af-app/lead-status",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          260,
+          300
+        ],
+        "name": "Status Update Webhook"
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body;\nconst leadId = body.lead_id;\nconst newStatus = body.status;\nconst now = new Date().toISOString();\n\n// Build update payload with appropriate timestamp fields\nconst updatePayload = {\n  status: newStatus,\n  updated_at: now\n};\n\n// Set specific timestamp fields based on status\nif (newStatus === 'contacted') {\n  updatePayload.contacted_at = now;\n} else if (newStatus === 'qualified') {\n  updatePayload.qualified_at = now;\n} else if (newStatus === 'converted') {\n  updatePayload.converted_at = now;\n} else if (newStatus === 'lost') {\n  updatePayload.lost_at = now;\n}\n\n// PATCH the lead\nconst response = await this.helpers.httpRequest({\n  method: 'PATCH',\n  url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/lead_interactions?id=eq.${leadId}`,\n  headers: {\n    'apikey': $env.SUPABASE_API_KEY,\n    'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`,\n    'Content-Type': 'application/json',\n    'Prefer': 'return=representation'\n  },\n  body: updatePayload\n});\n\nconst updated = Array.isArray(response) ? response[0] : response;\n\nreturn [{\n  json: {\n    lead_id: leadId,\n    client_id: body.client_id || updated.client_id,\n    lead_name: body.lead_name || updated.lead_name,\n    old_status: body.old_status,\n    new_status: newStatus\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          480,
+          300
+        ],
+        "name": "Update Lead Status"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "agent_activity",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "agent_name",
+                "fieldValue": "Orion"
+              },
+              {
+                "fieldName": "action",
+                "fieldValue": "lead_status_change"
+              },
+              {
+                "fieldName": "description",
+                "fieldValue": "=Lead {{ $json.lead_name }} status changed from {{ $json.old_status }} to {{ $json.new_status }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          700,
+          200
+        ],
+        "name": "Log Orion Status Change",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "notifications",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "type",
+                "fieldValue": "lead_update"
+              },
+              {
+                "fieldName": "title",
+                "fieldValue": "=Lead Status: {{ $json.lead_name }}"
+              },
+              {
+                "fieldName": "message",
+                "fieldValue": "={{ $json.lead_name }} moved from {{ $json.old_status }} to {{ $json.new_status }}"
+              },
+              {
+                "fieldName": "read",
+                "fieldValue": "false"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          700,
+          400
+        ],
+        "name": "Create Status Notification",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={ \"success\": true, \"message\": \"Lead status updated\" }",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          920,
+          400
+        ],
+        "name": "Respond OK"
+      }
+    ],
+    "connections": {
+      "Status Update Webhook": {
+        "main": [
+          [
+            {
+              "node": "Update Lead Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Lead Status": {
+        "main": [
+          [
+            {
+              "node": "Log Orion Status Change",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Create Status Notification",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Status Notification": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    }
+  },
+  {
+    "name": "AF-APP \u2014 Agent Heartbeat",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours",
+                "hoursInterval": 4
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          260,
+          300
+        ],
+        "name": "Every 4 Hours"
+      },
+      {
+        "parameters": {
+          "operation": "getAll",
+          "tableId": "clients",
+          "returnAll": true,
+          "filterType": "string",
+          "filterString": "status=eq.active",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          480,
+          300
+        ],
+        "name": "Get Active Clients",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst results = [];\nconst agents = ['Cyrus', 'Maven', 'Orion', 'Atlas', 'Nova', 'Vega'];\nconst now = new Date();\nconst twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);\n\nfor (const item of items) {\n  const clientId = item.json.id;\n  const agentStatuses = [];\n  \n  for (const agent of agents) {\n    // Check last activity for each agent\n    const activity = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/agent_activity?client_id=eq.${clientId}&agent_name=eq.${agent}&order=created_at.desc&limit=1&select=id,agent_name,action,created_at`,\n      headers: {\n        'apikey': $env.SUPABASE_API_KEY,\n        'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n      }\n    });\n    \n    const lastActivity = activity && activity.length > 0 ? activity[0] : null;\n    const isHealthy = lastActivity \n      ? new Date(lastActivity.created_at) > twelveHoursAgo \n      : false;\n    \n    agentStatuses.push({\n      agent_name: agent,\n      status: isHealthy ? 'healthy' : 'inactive',\n      last_seen: lastActivity ? lastActivity.created_at : null,\n      last_action: lastActivity ? lastActivity.action : null\n    });\n  }\n  \n  const healthyCount = agentStatuses.filter(a => a.status === 'healthy').length;\n  const inactiveAgents = agentStatuses.filter(a => a.status === 'inactive').map(a => a.agent_name);\n  \n  results.push({\n    json: {\n      client_id: clientId,\n      agents_checked: agents.length,\n      healthy_count: healthyCount,\n      inactive_agents: inactiveAgents.join(', ') || 'none',\n      all_healthy: healthyCount === agents.length\n    }\n  });\n}\n\nreturn results;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          700,
+          300
+        ],
+        "name": "Check Agent Health"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "agent_activity",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "agent_name",
+                "fieldValue": "Cyrus"
+              },
+              {
+                "fieldName": "action",
+                "fieldValue": "heartbeat_check"
+              },
+              {
+                "fieldName": "description",
+                "fieldValue": "=Agent heartbeat: {{ $json.healthy_count }}/{{ $json.agents_checked }} healthy. Inactive: {{ $json.inactive_agents }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          920,
+          300
+        ],
+        "name": "Log Cyrus Heartbeat",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Every 4 Hours": {
+        "main": [
+          [
+            {
+              "node": "Get Active Clients",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Active Clients": {
+        "main": [
+          [
+            {
+              "node": "Check Agent Health",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Agent Health": {
+        "main": [
+          [
+            {
+              "node": "Log Cyrus Heartbeat",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    }
+  },
+  {
+    "name": "AF-APP \u2014 Review Monitor",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "af-app/review-received",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          260,
+          300
+        ],
+        "name": "Review Webhook"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "name": "client_id",
+                "value": "={{ $json.body.client_id }}",
+                "type": "string"
+              },
+              {
+                "name": "platform",
+                "value": "={{ $json.body.platform }}",
+                "type": "string"
+              },
+              {
+                "name": "reviewer_name",
+                "value": "={{ $json.body.reviewer_name }}",
+                "type": "string"
+              },
+              {
+                "name": "rating",
+                "value": "={{ $json.body.rating }}",
+                "type": "number"
+              },
+              {
+                "name": "review_text",
+                "value": "={{ $json.body.review_text }}",
+                "type": "string"
+              },
+              {
+                "name": "review_url",
+                "value": "={{ $json.body.review_url }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          480,
+          300
+        ],
+        "name": "Map Review Data"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "agent_activity",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "agent_name",
+                "fieldValue": "Atlas"
+              },
+              {
+                "fieldName": "action",
+                "fieldValue": "review_received"
+              },
+              {
+                "fieldName": "description",
+                "fieldValue": "=New {{ $json.rating }}-star review on {{ $json.platform }} from {{ $json.reviewer_name }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          700,
+          200
+        ],
+        "name": "Log Atlas Review Activity",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "notifications",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "type",
+                "fieldValue": "review"
+              },
+              {
+                "fieldName": "title",
+                "fieldValue": "=New {{ $json.rating }}\u2605 Review on {{ $json.platform }}"
+              },
+              {
+                "fieldName": "message",
+                "fieldValue": "={{ $json.reviewer_name }} left a {{ $json.rating }}-star review: \"{{ $json.review_text.substring(0, 120) }}...\""
+              },
+              {
+                "fieldName": "read",
+                "fieldValue": "false"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          700,
+          400
+        ],
+        "name": "Create Review Notification",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={ \"success\": true, \"message\": \"Review logged successfully\" }",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          920,
+          400
+        ],
+        "name": "Respond OK"
+      }
+    ],
+    "connections": {
+      "Review Webhook": {
+        "main": [
+          [
+            {
+              "node": "Map Review Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Map Review Data": {
+        "main": [
+          [
+            {
+              "node": "Log Atlas Review Activity",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Create Review Notification",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Review Notification": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    }
+  },
+  {
+    "name": "AF-APP \u2014 Ad Performance Sync",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "af-app/ad-performance",
+          "responseMode": "lastNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          260,
+          300
+        ],
+        "name": "Ad Data Webhook"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "name": "client_id",
+                "value": "={{ $json.body.client_id }}",
+                "type": "string"
+              },
+              {
+                "name": "date",
+                "value": "={{ $json.body.date }}",
+                "type": "string"
+              },
+              {
+                "name": "ad_spend",
+                "value": "={{ $json.body.ad_spend }}",
+                "type": "number"
+              },
+              {
+                "name": "ad_impressions",
+                "value": "={{ $json.body.ad_impressions }}",
+                "type": "number"
+              },
+              {
+                "name": "ad_clicks",
+                "value": "={{ $json.body.ad_clicks }}",
+                "type": "number"
+              },
+              {
+                "name": "ad_conversions",
+                "value": "={{ $json.body.ad_conversions }}",
+                "type": "number"
+              },
+              {
+                "name": "ad_platform",
+                "value": "={{ $json.body.ad_platform }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          480,
+          300
+        ],
+        "name": "Map Ad Fields"
+      },
+      {
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nconst clientId = data.client_id;\nconst date = data.date;\n\n// Check if daily_metrics row already exists for this client + date\nconst existing = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/daily_metrics?client_id=eq.${clientId}&date=eq.${date}&select=id,ad_spend,ad_impressions,ad_clicks`,\n  headers: {\n    'apikey': $env.SUPABASE_API_KEY,\n    'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n  }\n});\n\nconst adPayload = {\n  ad_spend: data.ad_spend || 0,\n  ad_impressions: data.ad_impressions || 0,\n  ad_clicks: data.ad_clicks || 0\n};\n\nif (existing && existing.length > 0) {\n  // PATCH existing record\n  await this.helpers.httpRequest({\n    method: 'PATCH',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/daily_metrics?id=eq.${existing[0].id}`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=representation'\n    },\n    body: adPayload\n  });\n} else {\n  // POST new record with ad data\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/daily_metrics`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=representation'\n    },\n    body: {\n      client_id: clientId,\n      date: date,\n      new_leads: 0,\n      hot_leads: 0,\n      avg_lead_score: 0,\n      agent_actions: 0,\n      total_conversations: 0,\n      ...adPayload\n    }\n  });\n}\n\nreturn [{\n  json: {\n    client_id: clientId,\n    date: date,\n    action: existing && existing.length > 0 ? 'updated' : 'created',\n    ...adPayload\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          700,
+          300
+        ],
+        "name": "Update Daily Metrics Ad Fields"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "tableId": "agent_activity",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldName": "client_id",
+                "fieldValue": "={{ $json.client_id }}"
+              },
+              {
+                "fieldName": "agent_name",
+                "fieldValue": "Maven"
+              },
+              {
+                "fieldName": "action",
+                "fieldValue": "ad_performance_sync"
+              },
+              {
+                "fieldName": "description",
+                "fieldValue": "=Ad performance {{ $json.action }} for {{ $json.date }}: ${{ $json.ad_spend }} spend, {{ $json.ad_impressions }} impressions, {{ $json.ad_clicks }} clicks"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          920,
+          300
+        ],
+        "name": "Log Maven Ad Sync",
+        "credentials": {
+          "supabaseApi": {
+            "id": "",
+            "name": "Supabase account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Ad Data Webhook": {
+        "main": [
+          [
+            {
+              "node": "Map Ad Fields",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Map Ad Fields": {
+        "main": [
+          [
+            {
+              "node": "Update Daily Metrics Ad Fields",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Daily Metrics Ad Fields": {
+        "main": [
+          [
+            {
+              "node": "Log Maven Ad Sync",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "meta": {
+      "templateCredsSetupCompleted": true
+    }
+  }
+]

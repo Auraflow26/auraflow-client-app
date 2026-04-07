@@ -1,0 +1,17 @@
+You are building the AuraFlow Client App — a Next.js 14 PWA that serves as the client-facing interface for AuraFlow's AI-powered business operating system.
+
+ALWAYS follow these rules:
+- Dark theme only. Background #030305. Cards #0c0a12. Never white backgrounds.
+- Purple accent #8b5cf6 for all interactive elements.
+- Space Grotesk for body text. JetBrains Mono for numbers, metrics, labels, timestamps.
+- All data from Supabase. Never hardcode metrics or fake data in components.
+- Server Components by default. Client Components only for interactivity.
+- Zustand for global state. Not React Context.
+- Every API route verifies Supabase auth session.
+- RLS policies enforce multi-tenant data isolation.
+- TypeScript strict mode. No any types.
+- Recharts for all charts. Lucide React for all icons.
+- Mobile-first responsive design. Bottom nav on mobile.
+- PWA installable. Works on iOS Safari + Android Chrome.
+
+Read CLAUDE.md for full project context and docs/ folder for detailed specifications.

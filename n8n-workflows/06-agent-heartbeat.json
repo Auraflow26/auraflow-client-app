@@ -1,0 +1,128 @@
+{
+  "name": "AF-APP — Agent Heartbeat",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "name": "Every 4 Hours"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "clients",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "status=eq.active",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [480, 300],
+      "name": "Get Active Clients",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\nconst agents = ['Cyrus', 'Maven', 'Orion', 'Atlas', 'Nova', 'Vega'];\nconst now = new Date();\nconst twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);\n\nfor (const item of items) {\n  const clientId = item.json.id;\n  const agentStatuses = [];\n  \n  for (const agent of agents) {\n    // Check last activity for each agent\n    const activity = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/agent_activity?client_id=eq.${clientId}&agent_name=eq.${agent}&order=created_at.desc&limit=1&select=id,agent_name,action,created_at`,\n      headers: {\n        'apikey': $env.SUPABASE_API_KEY,\n        'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n      }\n    });\n    \n    const lastActivity = activity && activity.length > 0 ? activity[0] : null;\n    const isHealthy = lastActivity \n      ? new Date(lastActivity.created_at) > twelveHoursAgo \n      : false;\n    \n    agentStatuses.push({\n      agent_name: agent,\n      status: isHealthy ? 'healthy' : 'inactive',\n      last_seen: lastActivity ? lastActivity.created_at : null,\n      last_action: lastActivity ? lastActivity.action : null\n    });\n  }\n  \n  const healthyCount = agentStatuses.filter(a => a.status === 'healthy').length;\n  const inactiveAgents = agentStatuses.filter(a => a.status === 'inactive').map(a => a.agent_name);\n  \n  results.push({\n    json: {\n      client_id: clientId,\n      agents_checked: agents.length,\n      healthy_count: healthyCount,\n      inactive_agents: inactiveAgents.join(', ') || 'none',\n      all_healthy: healthyCount === agents.length\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "name": "Check Agent Health"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "agent_activity",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "agent_name",
+              "fieldValue": "Cyrus"
+            },
+            {
+              "fieldName": "action",
+              "fieldValue": "heartbeat_check"
+            },
+            {
+              "fieldName": "description",
+              "fieldValue": "=Agent heartbeat: {{ $json.healthy_count }}/{{ $json.agents_checked }} healthy. Inactive: {{ $json.inactive_agents }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [920, 300],
+      "name": "Log Cyrus Heartbeat",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 4 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get Active Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Clients": {
+      "main": [
+        [
+          {
+            "node": "Check Agent Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Agent Health": {
+      "main": [
+        [
+          {
+            "node": "Log Cyrus Heartbeat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

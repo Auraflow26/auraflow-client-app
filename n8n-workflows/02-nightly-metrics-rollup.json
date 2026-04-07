@@ -1,0 +1,161 @@
+{
+  "name": "AF-APP — Nightly Metrics Rollup",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 0,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "name": "Midnight Daily"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "clients",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "status=eq.active",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [480, 300],
+      "name": "Get Active Clients",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const clientId = item.json.id;\n  const today = new Date();\n  today.setHours(0, 0, 0, 0);\n  const yesterday = new Date(today);\n  yesterday.setDate(yesterday.getDate() - 1);\n  \n  const dateStr = yesterday.toISOString().split('T')[0];\n  \n  // Fetch leads created yesterday for this client\n  const leadsResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/lead_interactions?client_id=eq.${clientId}&created_at=gte.${yesterday.toISOString()}&created_at=lt.${today.toISOString()}&select=id,score,source`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n    }\n  });\n  \n  // Fetch agent activity yesterday\n  const activityResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/agent_activity?client_id=eq.${clientId}&created_at=gte.${yesterday.toISOString()}&created_at=lt.${today.toISOString()}&select=id,agent_name,action`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n    }\n  });\n  \n  const leads = leadsResponse || [];\n  const activities = activityResponse || [];\n  \n  const newLeads = leads.length;\n  const hotLeads = leads.filter(l => l.score >= 80).length;\n  const avgScore = leads.length > 0 \n    ? Math.round(leads.reduce((sum, l) => sum + (l.score || 0), 0) / leads.length) \n    : 0;\n  const agentActions = activities.length;\n  \n  results.push({\n    json: {\n      client_id: clientId,\n      date: dateStr,\n      new_leads: newLeads,\n      hot_leads: hotLeads,\n      avg_lead_score: avgScore,\n      agent_actions: agentActions,\n      total_conversations: 0,\n      ad_spend: 0,\n      ad_impressions: 0,\n      ad_clicks: 0\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "name": "Aggregate Daily Metrics"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "daily_metrics",
+        "fieldsUi": {
+          "fieldValues": []
+        },
+        "options": {
+          "autoMapInputData": true
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [920, 300],
+      "name": "Insert Daily Metrics",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "agent_activity",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "agent_name",
+              "fieldValue": "Cyrus"
+            },
+            {
+              "fieldName": "action",
+              "fieldValue": "nightly_rollup"
+            },
+            {
+              "fieldName": "description",
+              "fieldValue": "=Nightly metrics rollup completed for {{ $json.date }}. New leads: {{ $json.new_leads }}, Agent actions: {{ $json.agent_actions }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1140, 300],
+      "name": "Log Cyrus Heartbeat",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Midnight Daily": {
+      "main": [
+        [
+          {
+            "node": "Get Active Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Clients": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Daily Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Daily Metrics": {
+      "main": [
+        [
+          {
+            "node": "Insert Daily Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Daily Metrics": {
+      "main": [
+        [
+          {
+            "node": "Log Cyrus Heartbeat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

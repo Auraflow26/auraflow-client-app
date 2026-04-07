@@ -1,0 +1,161 @@
+{
+  "name": "AF-APP — Lead Status Update",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "af-app/lead-status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "name": "Status Update Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst leadId = body.lead_id;\nconst newStatus = body.status;\nconst now = new Date().toISOString();\n\n// Build update payload with appropriate timestamp fields\nconst updatePayload = {\n  status: newStatus,\n  updated_at: now\n};\n\n// Set specific timestamp fields based on status\nif (newStatus === 'contacted') {\n  updatePayload.contacted_at = now;\n} else if (newStatus === 'qualified') {\n  updatePayload.qualified_at = now;\n} else if (newStatus === 'converted') {\n  updatePayload.converted_at = now;\n} else if (newStatus === 'lost') {\n  updatePayload.lost_at = now;\n}\n\n// PATCH the lead\nconst response = await this.helpers.httpRequest({\n  method: 'PATCH',\n  url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/lead_interactions?id=eq.${leadId}`,\n  headers: {\n    'apikey': $env.SUPABASE_API_KEY,\n    'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`,\n    'Content-Type': 'application/json',\n    'Prefer': 'return=representation'\n  },\n  body: updatePayload\n});\n\nconst updated = Array.isArray(response) ? response[0] : response;\n\nreturn [{\n  json: {\n    lead_id: leadId,\n    client_id: body.client_id || updated.client_id,\n    lead_name: body.lead_name || updated.lead_name,\n    old_status: body.old_status,\n    new_status: newStatus\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300],
+      "name": "Update Lead Status"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "agent_activity",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "agent_name",
+              "fieldValue": "Orion"
+            },
+            {
+              "fieldName": "action",
+              "fieldValue": "lead_status_change"
+            },
+            {
+              "fieldName": "description",
+              "fieldValue": "=Lead {{ $json.lead_name }} status changed from {{ $json.old_status }} to {{ $json.new_status }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [700, 200],
+      "name": "Log Orion Status Change",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "notifications",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "type",
+              "fieldValue": "lead_update"
+            },
+            {
+              "fieldName": "title",
+              "fieldValue": "=Lead Status: {{ $json.lead_name }}"
+            },
+            {
+              "fieldName": "message",
+              "fieldValue": "={{ $json.lead_name }} moved from {{ $json.old_status }} to {{ $json.new_status }}"
+            },
+            {
+              "fieldName": "read",
+              "fieldValue": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [700, 400],
+      "name": "Create Status Notification",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"message\": \"Lead status updated\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [920, 400],
+      "name": "Respond OK"
+    }
+  ],
+  "connections": {
+    "Status Update Webhook": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Status": {
+      "main": [
+        [
+          {
+            "node": "Log Orion Status Change",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Status Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Status Notification": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

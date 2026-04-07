@@ -1,0 +1,152 @@
+{
+  "name": "AF-APP — Ad Performance Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "af-app/ad-performance",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "name": "Ad Data Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "client_id",
+              "value": "={{ $json.body.client_id }}",
+              "type": "string"
+            },
+            {
+              "name": "date",
+              "value": "={{ $json.body.date }}",
+              "type": "string"
+            },
+            {
+              "name": "ad_spend",
+              "value": "={{ $json.body.ad_spend }}",
+              "type": "number"
+            },
+            {
+              "name": "ad_impressions",
+              "value": "={{ $json.body.ad_impressions }}",
+              "type": "number"
+            },
+            {
+              "name": "ad_clicks",
+              "value": "={{ $json.body.ad_clicks }}",
+              "type": "number"
+            },
+            {
+              "name": "ad_conversions",
+              "value": "={{ $json.body.ad_conversions }}",
+              "type": "number"
+            },
+            {
+              "name": "ad_platform",
+              "value": "={{ $json.body.ad_platform }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [480, 300],
+      "name": "Map Ad Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst clientId = data.client_id;\nconst date = data.date;\n\n// Check if daily_metrics row already exists for this client + date\nconst existing = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/daily_metrics?client_id=eq.${clientId}&date=eq.${date}&select=id,ad_spend,ad_impressions,ad_clicks`,\n  headers: {\n    'apikey': $env.SUPABASE_API_KEY,\n    'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`\n  }\n});\n\nconst adPayload = {\n  ad_spend: data.ad_spend || 0,\n  ad_impressions: data.ad_impressions || 0,\n  ad_clicks: data.ad_clicks || 0\n};\n\nif (existing && existing.length > 0) {\n  // PATCH existing record\n  await this.helpers.httpRequest({\n    method: 'PATCH',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/daily_metrics?id=eq.${existing[0].id}`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=representation'\n    },\n    body: adPayload\n  });\n} else {\n  // POST new record with ad data\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: `https://bfzdcyuyilesubtgbhdc.supabase.co/rest/v1/daily_metrics`,\n    headers: {\n      'apikey': $env.SUPABASE_API_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_API_KEY}`,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=representation'\n    },\n    body: {\n      client_id: clientId,\n      date: date,\n      new_leads: 0,\n      hot_leads: 0,\n      avg_lead_score: 0,\n      agent_actions: 0,\n      total_conversations: 0,\n      ...adPayload\n    }\n  });\n}\n\nreturn [{\n  json: {\n    client_id: clientId,\n    date: date,\n    action: existing && existing.length > 0 ? 'updated' : 'created',\n    ...adPayload\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "name": "Update Daily Metrics Ad Fields"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "agent_activity",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $json.client_id }}"
+            },
+            {
+              "fieldName": "agent_name",
+              "fieldValue": "Maven"
+            },
+            {
+              "fieldName": "action",
+              "fieldValue": "ad_performance_sync"
+            },
+            {
+              "fieldName": "description",
+              "fieldValue": "=Ad performance {{ $json.action }} for {{ $json.date }}: ${{ $json.ad_spend }} spend, {{ $json.ad_impressions }} impressions, {{ $json.ad_clicks }} clicks"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [920, 300],
+      "name": "Log Maven Ad Sync",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Ad Data Webhook": {
+      "main": [
+        [
+          {
+            "node": "Map Ad Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Ad Fields": {
+      "main": [
+        [
+          {
+            "node": "Update Daily Metrics Ad Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Daily Metrics Ad Fields": {
+      "main": [
+        [
+          {
+            "node": "Log Maven Ad Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

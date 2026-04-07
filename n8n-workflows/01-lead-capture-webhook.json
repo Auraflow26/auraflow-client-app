@@ -1,0 +1,283 @@
+{
+  "name": "AF-APP — Lead Capture Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "af-app/lead-capture",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "name": "Lead Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "client_id",
+              "value": "={{ $json.body.client_id }}",
+              "type": "string"
+            },
+            {
+              "name": "lead_name",
+              "value": "={{ $json.body.lead_name }}",
+              "type": "string"
+            },
+            {
+              "name": "lead_email",
+              "value": "={{ $json.body.lead_email }}",
+              "type": "string"
+            },
+            {
+              "name": "lead_phone",
+              "value": "={{ $json.body.lead_phone }}",
+              "type": "string"
+            },
+            {
+              "name": "source",
+              "value": "={{ $json.body.source }}",
+              "type": "string"
+            },
+            {
+              "name": "score",
+              "value": "={{ $json.body.score }}",
+              "type": "number"
+            },
+            {
+              "name": "stage",
+              "value": "new",
+              "type": "string"
+            },
+            {
+              "name": "notes",
+              "value": "={{ $json.body.notes }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [480, 300],
+      "name": "Map Lead Fields"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "lead_interactions",
+        "fieldsUi": {
+          "fieldValues": []
+        },
+        "options": {
+          "autoMapInputData": true
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [700, 300],
+      "name": "Insert Lead",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "agent_activity",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $('Map Lead Fields').item.json.client_id }}"
+            },
+            {
+              "fieldName": "agent_name",
+              "fieldValue": "Maven"
+            },
+            {
+              "fieldName": "action",
+              "fieldValue": "lead_captured"
+            },
+            {
+              "fieldName": "description",
+              "fieldValue": "=Captured new lead: {{ $('Map Lead Fields').item.json.lead_name }} (score: {{ $('Map Lead Fields').item.json.score }})"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [920, 200],
+      "name": "Log Maven Activity",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Map Lead Fields').item.json.score }}",
+              "rightValue": 80,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [920, 400],
+      "name": "Hot Lead?"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "notifications",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "client_id",
+              "fieldValue": "={{ $('Map Lead Fields').item.json.client_id }}"
+            },
+            {
+              "fieldName": "type",
+              "fieldValue": "hot_lead"
+            },
+            {
+              "fieldName": "title",
+              "fieldValue": "=Hot Lead Alert: {{ $('Map Lead Fields').item.json.lead_name }}"
+            },
+            {
+              "fieldName": "message",
+              "fieldValue": "=New high-score lead ({{ $('Map Lead Fields').item.json.score }}) from {{ $('Map Lead Fields').item.json.source }}. Follow up recommended."
+            },
+            {
+              "fieldName": "read",
+              "fieldValue": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1140, 340],
+      "name": "Create Hot Lead Notification",
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"message\": \"Lead captured successfully\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1360, 400],
+      "name": "Respond OK"
+    }
+  ],
+  "connections": {
+    "Lead Webhook": {
+      "main": [
+        [
+          {
+            "node": "Map Lead Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Lead Fields": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Lead": {
+      "main": [
+        [
+          {
+            "node": "Log Maven Activity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Hot Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hot Lead?": {
+      "main": [
+        [
+          {
+            "node": "Create Hot Lead Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Hot Lead Notification": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
