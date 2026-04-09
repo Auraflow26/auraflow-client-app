@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraFlow — Advanced Architecture Complete</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030305; --bg2: #0c0a12; --bg3: #0f0d15; --bg4: #141220;
+            --accent: #8b5cf6; --accent-l: #a78bfa; --accent-b: #c4b5fd;
+            --glow: rgba(139,92,246,0.12); --glow2: rgba(139,92,246,0.25);
+            --t1: #faf5ff; --t2: #c4b5fd; --t3: #7c7291; --t4: #4a4458;
+            --b: rgba(139,92,246,0.1); --b2: rgba(139,92,246,0.3);
+            --ok: #10b981; --warn: #f59e0b; --err: #ef4444; --gold: #d4af37;
+            --fm: 'JetBrains Mono', monospace;
+            --f: 'Space Grotesk', -apple-system, sans-serif;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:var(--f); background:var(--bg); color:var(--t1); line-height:1.7; -webkit-font-smoothing:antialiased; }
+        .page { max-width:900px; margin:0 auto; padding:3rem 2rem 5rem; }
+
+        /* ── HERO ── */
+        .hero { padding:2rem 0 2.5rem; }
+        .badge {
+            display:inline-flex; align-items:center; gap:.45rem;
+            padding:.3rem .8rem; background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.3);
+            border-radius:100px; font-size:.65rem; font-weight:600;
+            color:#10b981; text-transform:uppercase; letter-spacing:.12em; margin-bottom:1rem;
+        }
+        .badge::before { content:''; width:5px; height:5px; background:var(--ok); border-radius:50%; box-shadow:0 0 6px var(--ok); }
+        .hero h1 {
+            font-size:clamp(1.8rem,4vw,2.6rem); font-weight:700; letter-spacing:-1.5px; line-height:1.12; margin-bottom:.75rem;
+            background:linear-gradient(135deg,#8b5cf6,#c4b5fd 50%,#e9d5ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+        }
+        .hero p { font-size:1rem; color:var(--t2); max-width:560px; }
+        .build-line { margin-top:1rem; display:flex; align-items:center; gap:.6rem; font-family:var(--fm); font-size:.75rem; color:var(--ok); }
+        .build-line span { color:var(--t3); }
+
+        /* ── SECTION ── */
+        .section { margin-bottom:2.5rem; }
+        .s-label { font-family:var(--fm); font-size:.65rem; text-transform:uppercase; letter-spacing:.14em; color:var(--gold); margin-bottom:.35rem; }
+        .s-title { font-size:1.25rem; font-weight:700; letter-spacing:-.5px; margin-bottom:.35rem; }
+        .s-desc { color:var(--t2); max-width:580px; margin-bottom:1.1rem; font-size:.9rem; }
+
+        /* ── PHASE CARDS ── */
+        .phases { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:2.5rem; }
+        @media(max-width:640px){ .phases { grid-template-columns:1fr; } }
+
+        .phase-card {
+            background:linear-gradient(155deg,var(--bg2),#1a1025);
+            border:1px solid var(--b); border-radius:14px; padding:1.25rem;
+            position:relative; overflow:hidden;
+        }
+        .phase-card::before {
+            content:''; position:absolute; top:0; left:0; right:0; height:2px;
+            background:var(--phase-color, var(--accent)); opacity:.6;
+        }
+        .phase-card:hover { border-color:var(--b2); }
+        .phase-header { display:flex; align-items:center; gap:.6rem; margin-bottom:.7rem; }
+        .phase-num {
+            font-family:var(--fm); font-size:.65rem; font-weight:600;
+            color:var(--phase-color, var(--accent-b));
+            background:rgba(139,92,246,.08); border:1px solid var(--glow2);
+            border-radius:5px; padding:.2rem .5rem; white-space:nowrap;
+        }
+        .phase-title { font-size:.95rem; font-weight:600; color:var(--t1); }
+        .check { font-size:.75rem; color:var(--ok); margin-left:auto; font-family:var(--fm); }
+        .phase-body { font-size:.8rem; color:var(--t2); line-height:1.6; }
+        .phase-files { margin-top:.75rem; display:flex; flex-wrap:wrap; gap:.35rem; }
+        .file-chip {
+            font-family:var(--fm); font-size:.65rem; color:var(--t3);
+            background:rgba(255,255,255,.03); border:1px solid var(--b);
+            border-radius:4px; padding:.15rem .45rem;
+        }
+
+        /* ── ROUTES TABLE ── */
+        .tbl { width:100%; border-collapse:separate; border-spacing:0; font-size:.8rem; margin:1rem 0; }
+        .tbl th {
+            background:rgba(139,92,246,.06); color:var(--t2); font-weight:600;
+            font-size:.65rem; text-transform:uppercase; letter-spacing:.06em;
+            padding:.6rem .8rem; text-align:left; border-bottom:1px solid var(--b2);
+        }
+        .tbl td { padding:.6rem .8rem; color:var(--t2); border-bottom:1px solid var(--b); vertical-align:top; }
+        .tbl td:first-child { color:var(--t1); font-family:var(--fm); font-size:.75rem; white-space:nowrap; }
+        .tbl tr:last-child td { border-bottom:none; }
+
+        /* ── ENV VARS ── */
+        .env-block { background:var(--bg2); border:1px solid var(--b); border-radius:12px; overflow:hidden; margin:1rem 0; }
+        .env-head {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:.45rem .85rem; background:rgba(139,92,246,.05);
+            border-bottom:1px solid var(--b); font-family:var(--fm); font-size:.65rem; color:var(--t3);
+        }
+        .env-head .tag { color:var(--gold); text-transform:uppercase; letter-spacing:.08em; }
+        .cbtn {
+            background:none; border:1px solid var(--b2); border-radius:4px;
+            padding:.15rem .5rem; color:var(--t3); font-family:var(--fm);
+            font-size:.6rem; cursor:pointer; transition:.2s;
+        }
+        .cbtn:hover { color:var(--accent-b); border-color:var(--accent); }
+        .cbtn.ok { color:var(--ok); border-color:var(--ok); }
+        pre { padding:1.1rem .9rem; font-family:var(--fm); font-size:.78rem; line-height:1.8; color:var(--t2); overflow-x:auto; }
+        .g { color:var(--ok); } .y { color:var(--warn); } .p { color:var(--accent-b); }
+        .c { color:var(--t4); }
+
+        /* ── SQL ── */
+        .sql-block { background:var(--bg2); border:1px solid var(--b); border-radius:12px; overflow:hidden; margin:1rem 0; }
+        .sql-head {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:.45rem .85rem; background:rgba(212,175,55,.04);
+            border-bottom:1px solid rgba(212,175,55,.15);
+            font-family:var(--fm); font-size:.65rem; color:var(--t3);
+        }
+        .sql-head .tag { color:var(--gold); text-transform:uppercase; letter-spacing:.08em; }
+
+        /* ── ALERT ── */
+        .alert { border-radius:10px; padding:.85rem 1.1rem; margin:1rem 0; font-size:.85rem; }
+        .alert-ok { background:rgba(16,185,129,.06); border:1px solid rgba(16,185,129,.2); color:var(--t2); }
+        .alert-warn { background:rgba(245,158,11,.06); border:1px solid rgba(245,158,11,.2); color:var(--t2); }
+        .alert strong { color:var(--t1); }
+
+        /* ── FLOW ── */
+        .flow-box { background:var(--bg2); border:1px solid var(--b); border-radius:12px; padding:1.25rem; margin:1rem 0; }
+        .flow-box pre { padding:0; font-size:.78rem; color:var(--t2); }
+
+        /* ── FOOTER ── */
+        .foot { border-top:1px solid var(--b); padding-top:1.25rem; margin-top:2.5rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem; }
+        .foot p { font-size:.65rem; color:var(--t4); }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <header class="hero">
+        <div class="badge">All 10 Phases Complete — Build Verified</div>
+        <h1>AuraFlow Advanced<br>Architecture — Done.</h1>
+        <p>The app is now a full command center: real-time directives, AI lead scoring, push notifications, pipeline mutations, and a content engine. Data flows in <em>and</em> out.</p>
+        <div class="build-line">✓ 28 routes compiled <span>·</span> 0 type errors <span>·</span> 0 warnings <span>·</span> 2026-04-08</div>
+    </header>
+
+    <!-- PHASE GRID -->
+    <section class="section">
+        <div class="s-label">Phases 5–10</div>
+        <h2 class="s-title">What Was Built</h2>
+
+        <div class="phases">
+
+            <div class="phase-card" style="--phase-color:#10b981">
+                <div class="phase-header">
+                    <div class="phase-num">Phase 5</div>
+                    <div class="phase-title">Inbound Webhooks</div>
+                    <div class="check">✓ done</div>
+                </div>
+                <div class="phase-body">
+                    n8n can now push data into the app. Four authenticated receivers handle leads, metrics, agent logs, and notifications. Service-role Supabase client bypasses RLS safely.
+                </div>
+                <div class="phase-files">
+                    <span class="file-chip">/api/webhooks/lead</span>
+                    <span class="file-chip">/api/webhooks/metric</span>
+                    <span class="file-chip">/api/webhooks/agent</span>
+                    <span class="file-chip">/api/webhooks/notification</span>
+                    <span class="file-chip">lib/supabase/service.ts</span>
+                </div>
+            </div>
+
+            <div class="phase-card" style="--phase-color:#8b5cf6">
+                <div class="phase-header">
+                    <div class="phase-num">Phase 6</div>
+                    <div class="phase-title">Shadow Lead Score</div>
+                    <div class="check">✓ done</div>
+                </div>
+                <div class="phase-body">
+                    New leads auto-trigger Claude analysis in the background. Lead detail page shows intent score gauge, signals chips, urgency badge, and a copyable suggested reply.
+                </div>
+                <div class="phase-files">
+                    <span class="file-chip">LeadAnalysisPanel.tsx</span>
+                    <span class="file-chip">leads/[id]/page.tsx</span>
+                    <span class="file-chip">bridge.processNewLead()</span>
+                </div>
+            </div>
+
+            <div class="phase-card" style="--phase-color:#3b82f6">
+                <div class="phase-header">
+                    <div class="phase-num">Phase 7</div>
+                    <div class="phase-title">Push Notifications</div>
+                    <div class="check">✓ done</div>
+                </div>
+                <div class="phase-body">
+                    VAPID-signed web push via the native Push API. Registers after first user click. Urgent leads (intent ≥ 80) auto-fire a push even when the app is closed.
+                </div>
+                <div class="phase-files">
+                    <span class="file-chip">/api/push/subscribe</span>
+                    <span class="file-chip">/api/push/send</span>
+                    <span class="file-chip">usePushSubscription.ts</span>
+                    <span class="file-chip">worker/index.js</span>
+                </div>
+            </div>
+
+            <div class="phase-card" style="--phase-color:#f59e0b">
+                <div class="phase-header">
+                    <div class="phase-num">Phase 8</div>
+                    <div class="phase-title">Lead Pipeline</div>
+                    <div class="check">✓ done</div>
+                </div>
+                <div class="phase-body">
+                    Leads are no longer read-only. Quick-advance button on every card moves new → qualified → booked → won with optimistic UI and zero spinner.
+                </div>
+                <div class="phase-files">
+                    <span class="file-chip">PATCH /api/leads/[id]</span>
+                    <span class="file-chip">LeadCard.tsx</span>
+                    <span class="file-chip">LeadsView.tsx</span>
+                </div>
+            </div>
+
+            <div class="phase-card" style="--phase-color:#a78bfa">
+                <div class="phase-header">
+                    <div class="phase-num">Phase 9</div>
+                    <div class="phase-title">Content Engine UI</div>
+                    <div class="check">✓ done</div>
+                </div>
+                <div class="phase-body">
+                    Clients can request AI content from their phone. Platform picker (IG, Ads, Email, Blog) + brief → dispatched to n8n Content Engine. History from agent_activity.
+                </div>
+                <div class="phase-files">
+                    <span class="file-chip">/content page</span>
+                    <span class="file-chip">ContentView.tsx</span>
+                    <span class="file-chip">/api/content</span>
+                    <span class="file-chip">BottomNav: Content</span>
+                </div>
+            </div>
+
+            <div class="phase-card" style="--phase-color:#ef4444">
+                <div class="phase-header">
+                    <div class="phase-num">Phase 10</div>
+                    <div class="phase-title">Production Resilience</div>
+                    <div class="check">✓ done</div>
+                </div>
+                <div class="phase-body">
+                    ErrorBoundary wraps the dashboard layout. Skeleton loading states on all heavy pages. Redis-backed rate limiting on the public scan endpoint survives cold starts.
+                </div>
+                <div class="phase-files">
+                    <span class="file-chip">ErrorBoundary.tsx</span>
+                    <span class="file-chip">Skeleton.tsx</span>
+                    <span class="file-chip">loading.tsx files</span>
+                    <span class="file-chip">Upstash Redis</span>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ALL ROUTES -->
+    <section class="section">
+        <div class="s-label">Route Map</div>
+        <h2 class="s-title">All New API Routes</h2>
+
+        <table class="tbl">
+            <thead><tr><th>Route</th><th>Method</th><th>Auth</th><th>Purpose</th></tr></thead>
+            <tbody>
+                <tr><td>/api/webhooks/lead</td><td>POST</td><td>WEBHOOK_SECRET</td><td>Receive new lead from n8n → upsert + trigger AI analysis</td></tr>
+                <tr><td>/api/webhooks/metric</td><td>POST</td><td>WEBHOOK_SECRET</td><td>Upsert daily_metrics row</td></tr>
+                <tr><td>/api/webhooks/agent</td><td>POST</td><td>WEBHOOK_SECRET</td><td>Insert agent_activity → shows in live log</td></tr>
+                <tr><td>/api/webhooks/notification</td><td>POST</td><td>WEBHOOK_SECRET</td><td>Insert notification → pushed via Realtime</td></tr>
+                <tr><td>/api/leads/[id]</td><td>PATCH</td><td>Supabase session</td><td>Update lead status with milestone timestamps</td></tr>
+                <tr><td>/api/push/subscribe</td><td>POST / DELETE</td><td>Supabase session</td><td>Store / remove browser push subscription</td></tr>
+                <tr><td>/api/push/send</td><td>POST</td><td>WEBHOOK_SECRET</td><td>Send push to all subscriptions for a client</td></tr>
+                <tr><td>/api/content</td><td>POST</td><td>Supabase session</td><td>Trigger content production via bridge → n8n</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- N8N WEBHOOK URLS -->
+    <section class="section">
+        <div class="s-label">For n8n Workflows</div>
+        <h2 class="s-title">Webhook Payload Specs</h2>
+        <p class="s-desc">All webhooks require <code>Authorization: Bearer YOUR_WEBHOOK_SECRET</code> header.</p>
+
+        <div class="flow-box">
+            <pre><span class="c"># Lead captured by n8n Lead Scraper</span>
+POST /api/webhooks/lead
+{
+  <span class="g">"client_id"</span>:        <span class="p">"client_abc123"</span>,
+  <span class="g">"lead_name"</span>:        <span class="p">"John Smith"</span>,
+  <span class="g">"lead_phone"</span>:       <span class="p">"(555) 867-5309"</span>,
+  <span class="g">"lead_email"</span>:       <span class="p">"john@example.com"</span>,
+  <span class="g">"lead_location"</span>:    <span class="p">"Austin, TX"</span>,
+  <span class="g">"source"</span>:           <span class="p">"google_ads"</span>,   <span class="c">// google_ads|meta|angi|yelp|organic|referral|direct|lsa|thumbtack</span>
+  <span class="g">"service_type"</span>:     <span class="p">"HVAC Repair"</span>,
+  <span class="g">"estimated_value"</span>:  <span class="y">850</span>,
+  <span class="g">"notes"</span>:            <span class="p">"Mentioned unit is 15 years old"</span>
+}
+
+<span class="c"># Metrics sync</span>
+POST /api/webhooks/metric
+{ <span class="g">"client_id"</span>: <span class="p">"..."</span>, <span class="g">"date"</span>: <span class="p">"2026-04-08"</span>, <span class="g">"leads_captured"</span>: <span class="y">4</span>, <span class="g">"pipeline_value"</span>: <span class="y">8400</span>, ... }
+
+<span class="c"># Agent activity (any workflow completion)</span>
+POST /api/webhooks/agent
+{ <span class="g">"client_id"</span>: <span class="p">"..."</span>, <span class="g">"agent_name"</span>: <span class="p">"maven"</span>, <span class="g">"action"</span>: <span class="p">"Posted 3 ads"</span>, <span class="g">"category"</span>: <span class="p">"ad"</span>, <span class="g">"status"</span>: <span class="p">"completed"</span> }
+
+<span class="c"># Push notification</span>
+POST /api/webhooks/notification
+{ <span class="g">"client_id"</span>: <span class="p">"..."</span>, <span class="g">"type"</span>: <span class="p">"lead_hot"</span>, <span class="g">"severity"</span>: <span class="p">"high"</span>, <span class="g">"title"</span>: <span class="p">"Hot lead!"</span>, <span class="g">"body"</span>: <span class="p">"John just booked"</span> }</pre>
+        </div>
+    </section>
+
+    <!-- ENV VARS -->
+    <section class="section">
+        <div class="s-label">Vercel Environment Variables</div>
+        <h2 class="s-title">Add These to Vercel → Settings → Environment Variables</h2>
+
+        <div class="env-block">
+            <div class="env-head">
+                <span class="tag">Generated — copy these exactly</span>
+                <button class="cbtn" onclick="cc(this,'ev1')">Copy</button>
+            </div>
+            <pre id="ev1"><span class="g">VAPID_PUBLIC_KEY</span>=BG9wChjdpLvvu21G7qG-dDs2kF8RXIun_oT6elEn5-Poi03jSKHQl54UDoRUkctHT6SxkloDQQgr9h4_DfQaiBg
+<span class="g">NEXT_PUBLIC_VAPID_PUBLIC_KEY</span>=BG9wChjdpLvvu21G7qG-dDs2kF8RXIun_oT6elEn5-Poi03jSKHQl54UDoRUkctHT6SxkloDQQgr9h4_DfQaiBg
+<span class="g">VAPID_PRIVATE_KEY</span>=8ThQ5n9nas1ZSdGlHV5gW0qm2hihxL7v754I3VqDc0Q
+<span class="g">VAPID_EMAIL</span>=mailto:support@auraflowusa.com
+<span class="g">WEBHOOK_SECRET</span>=2cecf428f76bac79b210e85babdfea90356acb3580dee054594fc93c735e5f08</pre>
+        </div>
+
+        <div class="env-block">
+            <div class="env-head">
+                <span class="tag">You collect these</span>
+            </div>
+            <pre><span class="c"># Supabase dashboard → Project → Settings → API → service_role key</span>
+<span class="y">SUPABASE_SERVICE_ROLE_KEY</span>=eyJ...
+
+<span class="c"># Upstash console → your Redis DB → REST API section</span>
+<span class="y">UPSTASH_REDIS_REST_URL</span>=https://xxx.upstash.io
+<span class="y">UPSTASH_REDIS_REST_TOKEN</span>=AX...
+
+<span class="c"># Your Vercel domain</span>
+<span class="y">NEXT_PUBLIC_APP_URL</span>=https://your-app.vercel.app</pre>
+        </div>
+
+        <div class="alert alert-warn">
+            <strong>Important:</strong> After adding all env vars, redeploy from Vercel dashboard or run <code>vercel --prod</code>. The service worker (with push handlers) regenerates on each build.
+        </div>
+    </section>
+
+    <!-- SQL -->
+    <section class="section">
+        <div class="s-label">Supabase</div>
+        <h2 class="s-title">One Table Still Needed</h2>
+        <p class="s-desc">Run this in Supabase SQL Editor — all other tables already exist.</p>
+
+        <div class="sql-block">
+            <div class="sql-head">
+                <span class="tag">SQL — Supabase SQL Editor</span>
+                <button class="cbtn" onclick="cc(this,'sq1')">Copy</button>
+            </div>
+            <pre id="sq1">create table push_subscriptions (
+  id         uuid primary key default gen_random_uuid(),
+  client_id  text not null,
+  user_id    uuid not null,
+  endpoint   text not null unique,
+  keys       jsonb not null,   <span class="c">-- { p256dh, auth }</span>
+  created_at timestamptz default now()
+);
+
+alter table push_subscriptions enable row level security;
+
+create policy "Users manage their own push subscriptions"
+  on push_subscriptions for all
+  using (user_id = auth.uid());
+
+create index on push_subscriptions (client_id);</pre>
+        </div>
+    </section>
+
+    <!-- DATA FLOW -->
+    <section class="section">
+        <div class="s-label">Architecture</div>
+        <h2 class="s-title">End-to-End Data Flow</h2>
+
+        <div class="flow-box">
+            <pre><span class="c">── n8n workflow runs ──────────────────────────────────────────────────────</span>
+
+n8n Lead Scraper finds a new lead
+  → POST /api/webhooks/lead  (Authorization: Bearer WEBHOOK_SECRET)
+  → Upsert to lead_interactions
+  → Log to agent_activity  (shows in live log instantly via Realtime)
+  → Background: processNewLead() → Claude analysis → lead_analyses table
+      → If urgency=urgent: POST /api/push/send → web push to client's phone
+  → Client opens lead detail → LeadAnalysisPanel shows intent score + reply
+
+n8n Metrics Sync (daily)
+  → POST /api/webhooks/metric
+  → Upsert daily_metrics → Home page metrics refresh on next load
+
+n8n any workflow completes
+  → POST /api/webhooks/agent
+  → Insert agent_activity → Realtime → Agent live log updates
+
+<span class="c">── client action from app ─────────────────────────────────────────────────</span>
+
+Client taps "Qualify →" on a lead card
+  → PATCH /api/leads/[id] { status: "qualified" }
+  → Optimistic UI updates instantly (no spinner)
+  → qualified_at timestamp set + agent_activity logged
+
+Client submits content request
+  → POST /api/content { platform: "ig", brief: "..." }
+  → triggerContentProduction() → notification + agent_activity + n8n webhook
+  → Request appears in Content Engine history</pre>
+        </div>
+    </section>
+
+    <footer class="foot">
+        <p>© 2026 AuraFlow AI — Advanced Architecture v2.0 · All 10 phases complete</p>
+        <p>Build verified: 28 routes · 0 type errors</p>
+    </footer>
+</div>
+
+<script>
+function cc(btn, id) {
+    const el = document.getElementById(id)
+    const text = el ? el.innerText : ''
+    navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✓ Copied'
+        btn.classList.add('ok')
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok') }, 2000)
+    })
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,8 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardHeader } from '@/components/layout/DashboardHeader'
 import { DashboardShell } from '@/components/layout/DashboardShell'
+import { scoreColor } from '@/lib/utils'
 import type { ClientProfile, HierarchyNode } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -34,14 +36,14 @@ const LAYER_LABELS: Record<string, string> = {
 export default async function HierarchyPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('client_profiles')
     .select('*')
     .eq('user_id', user.id)
     .single<ClientProfile>()
-  if (!profile) return null
+  if (!profile) redirect('/login')
 
   const { data: nodes } = await supabase
     .from('hierarchy_nodes')
@@ -199,11 +201,4 @@ function LayerCard({
       </div>
     </div>
   )
-}
-
-function scoreColor(s: number): string {
-  if (s >= 70) return '#10b981'
-  if (s >= 50) return '#8b5cf6'
-  if (s >= 30) return '#f59e0b'
-  return '#ef4444'
 }

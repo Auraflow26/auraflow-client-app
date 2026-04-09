@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ChatView } from './ChatView'
 import type { ChatMessage, ClientProfile } from '@/lib/types'
@@ -7,14 +8,14 @@ export const dynamic = 'force-dynamic'
 export default async function ChatPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('client_profiles')
     .select('*')
     .eq('user_id', user.id)
     .single<ClientProfile>()
-  if (!profile) return null
+  if (!profile) redirect('/login')
 
   const { data: history } = await supabase
     .from('chat_messages')

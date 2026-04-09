@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
 import type { LeadStatus } from '@/lib/types'
 
 const STATUSES: { value: LeadStatus; label: string; color: string }[] = [
@@ -29,14 +28,12 @@ export function LeadStatusUpdate({ leadId, currentStatus }: Props) {
     setLoading(true)
     setStatus(next)
 
-    const now = new Date().toISOString()
-    const patch: Record<string, string> = { status: next, updated_at: now }
-    if (next === 'qualified' && !['qualified', 'booked', 'won', 'lost'].includes(currentStatus)) patch.qualified_at = now
-    if (next === 'booked') patch.booked_at = now
-    if (next === 'won') patch.won_at = now
-    if (next === 'lost') patch.lost_at = now
+    await fetch(`/api/leads/${leadId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: next }),
+    })
 
-    await supabase.from('lead_interactions').update(patch).eq('id', leadId)
     setLoading(false)
     router.refresh()
   }

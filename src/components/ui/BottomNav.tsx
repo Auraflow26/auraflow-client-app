@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Users, BarChart3, MessageSquare, GitBranch } from 'lucide-react'
+import { Home, Users, BarChart3, MessageSquare, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const tabs = [
@@ -10,7 +10,7 @@ const tabs = [
   { href: '/leads',     label: 'Leads',   icon: Users,         match: (p: string) => p.startsWith('/leads') },
   { href: '/reports',   label: 'Reports', icon: BarChart3,     match: (p: string) => p.startsWith('/reports') },
   { href: '/chat',      label: 'Chat',    icon: MessageSquare, match: (p: string) => p.startsWith('/chat') },
-  { href: '/hierarchy', label: 'System',  icon: GitBranch,     match: (p: string) => p.startsWith('/hierarchy') || p.startsWith('/agents') || p.startsWith('/settings') },
+  { href: '/content',   label: 'Content', icon: Sparkles,      match: (p: string) => p.startsWith('/content') || p.startsWith('/hierarchy') || p.startsWith('/agents') || p.startsWith('/settings') },
 ]
 
 export function BottomNav() {

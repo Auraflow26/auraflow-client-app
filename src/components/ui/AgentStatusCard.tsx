@@ -1,4 +1,6 @@
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { AgentConfig } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { timeAgo } from '@/lib/utils'
 
 interface AgentStatusCardProps {
@@ -6,6 +8,8 @@ interface AgentStatusCardProps {
   status: 'active' | 'idle' | 'error'
   metric?: string
   lastHeartbeat?: string | null
+  expanded?: boolean
+  onClick?: () => void
 }
 
 const statusDot = {
@@ -20,9 +24,20 @@ const statusLabel = {
   error: 'Error',
 }
 
-export function AgentStatusCard({ config, status, metric, lastHeartbeat }: AgentStatusCardProps) {
+export function AgentStatusCard({ config, status, metric, lastHeartbeat, expanded, onClick }: AgentStatusCardProps) {
+  const Chevron = expanded ? ChevronDown : ChevronRight
   return (
-    <div className="rounded-card border border-border bg-bg-card p-4 transition-colors hover:border-border-active">
+    <div
+      className={cn(
+        'rounded-card border border-border bg-bg-card p-4 transition-colors hover:border-border-active',
+        onClick && 'cursor-pointer',
+        expanded && 'border-border-active'
+      )}
+      onClick={onClick}
+      role={onClick ? 'button' : 'presentation'}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
+    >
       <div className="flex items-start gap-3">
         <div
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-mono text-sm font-semibold text-white"
@@ -38,6 +53,9 @@ export function AgentStatusCard({ config, status, metric, lastHeartbeat }: Agent
           </div>
           <div className="mt-0.5 text-xs text-text-muted">{config.role}</div>
         </div>
+        {onClick && (
+          <Chevron className="mt-1 h-4 w-4 flex-shrink-0 text-text-dim" />
+        )}
       </div>
       {metric && (
         <div className="mt-3 font-mono text-xs text-text-secondary">{metric}</div>

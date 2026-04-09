@@ -1,5 +1,7 @@
 // AuraFlow Platform — Complete TypeScript Types
-// Client App + Diagnostic Engine + Data Acquisition
+// Client App + Diagnostic Engine + Data Acquisition + Intelligence Bridge
+
+export type { Directive, DirectiveType, DirectiveSeverity, DirectiveActionType, LeadAnalysis, LeadUrgency, ChatContext } from './intelligence/types'
 
 // ═══════════════════════════════════════
 // CLIENT APP TYPES

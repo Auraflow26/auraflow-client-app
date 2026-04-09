@@ -1,12 +1,47 @@
+'use client'
+
 import Link from 'next/link'
-import { Phone } from 'lucide-react'
-import { Lead, LEAD_SOURCES } from '@/lib/types'
+import { Phone, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { Lead, LEAD_SOURCES, type LeadStatus } from '@/lib/types'
 import { Badge } from './Badge'
 import { formatCurrency, leadScoreBadge, timeAgo } from '@/lib/utils'
 
-export function LeadCard({ lead }: { lead: Lead }) {
+const STATUS_ORDER: LeadStatus[] = ['new', 'qualified', 'booked', 'won']
+const STATUS_NEXT_LABEL: Partial<Record<LeadStatus, string>> = {
+  new:       'Qualify →',
+  qualified: 'Book →',
+  booked:    'Mark Won →',
+}
+
+export function LeadCard({ lead, onStatusAdvance }: { lead: Lead; onStatusAdvance?: (id: string, newStatus: LeadStatus) => void }) {
+  const [advancing, setAdvancing] = useState(false)
   const source = LEAD_SOURCES[lead.source]
   const score = leadScoreBadge(lead.lead_score)
+
+  const currentIdx = STATUS_ORDER.indexOf(lead.status as LeadStatus)
+  const nextStatus = currentIdx >= 0 && currentIdx < STATUS_ORDER.length - 1
+    ? STATUS_ORDER[currentIdx + 1]
+    : null
+  const nextLabel = lead.status in STATUS_NEXT_LABEL ? STATUS_NEXT_LABEL[lead.status as LeadStatus] : null
+
+  async function advanceStatus() {
+    if (!nextStatus || advancing) return
+    setAdvancing(true)
+    try {
+      await fetch(`/api/leads/${lead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      onStatusAdvance?.(lead.id, nextStatus)
+    } catch {
+      // silent — lead detail page still works
+    } finally {
+      setAdvancing(false)
+    }
+  }
+
   return (
     <div className="rounded-card border border-border bg-bg-card p-4 transition-colors hover:border-border-active">
       <div className="flex items-start justify-between gap-3">
@@ -40,6 +75,17 @@ export function LeadCard({ lead }: { lead: Lead }) {
         >
           View
         </Link>
+        {nextLabel && (
+          <button
+            type="button"
+            onClick={advanceStatus}
+            disabled={advancing}
+            className="flex items-center gap-1 rounded-input border border-border-active px-3 py-2 text-xs font-medium text-accent-bright transition-colors hover:bg-accent hover:text-white disabled:opacity-50"
+          >
+            {advancing ? '…' : nextLabel}
+            {!advancing && <ChevronRight size={12} />}
+          </button>
+        )}
         {lead.lead_phone && (
           <a
             href={`tel:${lead.lead_phone}`}

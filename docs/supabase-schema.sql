@@ -129,6 +129,80 @@ CREATE POLICY "Clients see own hierarchy" ON hierarchy_nodes FOR SELECT USING (
 );
 
 -- ═══════════════════════════════════════════════════
+-- SECTION 1B: INTELLIGENCE BRIDGE TABLES
+-- ═══════════════════════════════════════════════════
+
+-- AI-generated actionable directives shown on Pulse feed
+CREATE TABLE IF NOT EXISTS directives (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES clients(id),
+  type TEXT NOT NULL,          -- lead | ad | content | review | seo | financial
+  severity TEXT NOT NULL,      -- urgent | important | informational
+  headline TEXT NOT NULL,
+  body TEXT,
+  action_label TEXT,
+  action_type TEXT,            -- draft_lead_email | optimize_campaign | generate_content | respond_review | boost_seo | view_details
+  action_payload JSONB DEFAULT '{}',
+  source_data JSONB DEFAULT '{}',
+  dismissed BOOLEAN DEFAULT false,
+  acted_on BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE directives ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Clients see own directives" ON directives FOR SELECT USING (
+  client_id IN (SELECT client_id FROM client_profiles WHERE user_id = auth.uid())
+);
+CREATE POLICY "Clients update own directives" ON directives FOR UPDATE USING (
+  client_id IN (SELECT client_id FROM client_profiles WHERE user_id = auth.uid())
+);
+CREATE POLICY "Clients insert directives" ON directives FOR INSERT WITH CHECK (
+  client_id IN (SELECT client_id FROM client_profiles WHERE user_id = auth.uid())
+);
+
+-- AI lead analysis results (Shadow Score)
+CREATE TABLE IF NOT EXISTS lead_analyses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES clients(id),
+  lead_id UUID REFERENCES lead_interactions(id),
+  intent_score INT,
+  intent_signals JSONB DEFAULT '[]',
+  suggested_reply TEXT,
+  urgency TEXT,                -- immediate | today | this_week | low
+  analysis_summary TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE lead_analyses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Clients see own lead analyses" ON lead_analyses FOR SELECT USING (
+  client_id IN (SELECT client_id FROM client_profiles WHERE user_id = auth.uid())
+);
+CREATE POLICY "Clients insert lead analyses" ON lead_analyses FOR INSERT WITH CHECK (
+  client_id IN (SELECT client_id FROM client_profiles WHERE user_id = auth.uid())
+);
+
+-- Long-term chat memory for client preferences
+CREATE TABLE IF NOT EXISTS chat_context (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES clients(id),
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  source TEXT DEFAULT 'inferred',    -- explicit | inferred
+  confidence FLOAT DEFAULT 0.8,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(client_id, key)
+);
+ALTER TABLE chat_context ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Clients see own context" ON chat_context FOR SELECT USING (
+  client_id IN (SELECT client_id FROM client_profiles WHERE user_id = auth.uid())
+);
+CREATE POLICY "Clients upsert own context" ON chat_context FOR INSERT WITH CHECK (
+  client_id IN (SELECT client_id FROM client_profiles WHERE user_id = auth.uid())
+);
+CREATE POLICY "Clients update own context" ON chat_context FOR UPDATE USING (
+  client_id IN (SELECT client_id FROM client_profiles WHERE user_id = auth.uid())
+);
+
+-- ═══════════════════════════════════════════════════
 -- SECTION 2: DIAGNOSTIC ENGINE TABLES
 -- ═══════════════════════════════════════════════════
 
@@ -234,3 +308,14 @@ CREATE INDEX IF NOT EXISTS idx_mock_health ON mock_datasets(health_level);
 CREATE INDEX IF NOT EXISTS idx_mock_score ON mock_datasets(foundation_score);
 CREATE INDEX IF NOT EXISTS idx_diag_results_client ON diagnostic_results(client_id);
 CREATE INDEX IF NOT EXISTS idx_diag_results_vertical ON diagnostic_results(vertical);
+
+-- Intelligence Bridge indexes
+CREATE INDEX IF NOT EXISTS idx_directives_client ON directives(client_id);
+CREATE INDEX IF NOT EXISTS idx_directives_created ON directives(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_directives_dismissed ON directives(client_id, dismissed);
+CREATE INDEX IF NOT EXISTS idx_lead_analyses_client ON lead_analyses(client_id);
+CREATE INDEX IF NOT EXISTS idx_lead_analyses_lead ON lead_analyses(lead_id);
+CREATE INDEX IF NOT EXISTS idx_chat_context_client ON chat_context(client_id);
+
+-- Realtime for directives
+ALTER PUBLICATION supabase_realtime ADD TABLE directives;

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { getClientContext, extractAndSavePreferences } from '@/lib/intelligence/bridge'
 import type { ClientProfile, DailyMetrics, Lead, AgentActivity, ChatMessage } from '@/lib/types'
 
 export const runtime = 'nodejs'
@@ -83,6 +84,9 @@ export async function POST(request: Request) {
     const avgRating = latestMetric?.avg_review_score ?? null
     const foundationScore = latestMetric?.foundation_score ?? profile.foundation_score
 
+    // Fetch client context memory (long-term preferences)
+    const clientContext = await getClientContext(supabase, profile.client_id)
+
     const systemPrompt = `You are AuraFlow Intelligence — the AI assistant for ${profile.business_name}, a ${profile.industry ?? 'business'} (${profile.employee_count ?? 'unspecified size'}).
 
 CURRENT METRICS (last 30 days):
@@ -97,10 +101,11 @@ CURRENT METRICS (last 30 days):
 - Foundation Score: ${foundationScore ?? 'n/a'}/100
 
 RECENT LEADS (most recent first):
-${(leads ?? []).map((l) => `- ${l.lead_name}: ${l.service_type}, $${l.estimated_value}, score ${l.lead_score}, source ${l.source}, status ${l.status}`).join('\n') || '- (none yet)'}
+${(leads ?? []).map((l) => `- ${l.lead_name} (id:${l.id}): ${l.service_type}, $${l.estimated_value}, score ${l.lead_score}, source ${l.source}, status ${l.status}`).join('\n') || '- (none yet)'}
 
 RECENT AGENT ACTIVITY:
 ${(activity ?? []).slice(0, 15).map((a) => `- ${a.agent_name}: ${a.action}${a.details ? ' — ' + a.details : ''}`).join('\n') || '- (none yet)'}
+${clientContext ? `\nCLIENT PREFERENCES (remembered from past conversations):\n${clientContext}` : ''}
 
 RULES:
 - Always ground responses in the actual data above. Never fabricate numbers.
@@ -108,7 +113,8 @@ RULES:
 - When recommending changes, note they require advisor approval.
 - Keep responses concise and actionable — this is a mobile interface. 2-4 short paragraphs max.
 - Use plain English a non-technical business owner understands.
-- Reference specific data points when answering performance questions.`
+- Reference specific data points when answering performance questions.
+- Respect all client preferences listed above — apply them to tone, style, and content.`
 
     const prior = (history ?? []).map((m) => ({
       role: m.role as 'user' | 'assistant',
@@ -154,6 +160,11 @@ RULES:
           ])
 
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
+
+          // Extract and save client preferences in background (non-blocking)
+          if (fullText) {
+            extractAndSavePreferences(supabase, profile.client_id, message, fullText).catch(() => {})
+          }
         } catch (e) {
           const msg = e instanceof Error ? e.message : 'Unknown error'
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))

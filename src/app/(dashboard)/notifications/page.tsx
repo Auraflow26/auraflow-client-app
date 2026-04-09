@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/layout/DashboardShell'
 import { NotificationsView } from './NotificationsView'
@@ -10,14 +11,14 @@ export const dynamic = 'force-dynamic'
 export default async function NotificationsPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('client_profiles')
     .select('client_id')
     .eq('user_id', user.id)
     .single<Pick<ClientProfile, 'client_id'>>()
-  if (!profile) return null
+  if (!profile) redirect('/login')
 
   const { data: notifications } = await supabase
     .from('notifications')

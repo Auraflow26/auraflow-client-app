@@ -1,18 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect } from 'react'
-import { MessageSquare, TrendingUp } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { MessageSquare, TrendingUp, Sparkles } from 'lucide-react'
 import { MetricCard } from '@/components/ui/MetricCard'
+import { DirectiveCard } from '@/components/ui/DirectiveCard'
 import { ActivityItem } from '@/components/ui/ActivityItem'
 import { useStore } from '@/lib/store'
+import { useRealtimeDirectives } from '@/hooks/useRealtimeDirectives'
 import { formatCurrency, formatDuration } from '@/lib/utils'
 import type { AgentActivity, DailyMetrics } from '@/lib/types'
+import type { Directive } from '@/lib/intelligence/types'
 
 interface Props {
   metrics: DailyMetrics | null
   prevMetrics: DailyMetrics | null
   activity: AgentActivity[]
+  directives: Directive[]
+  clientId: string
 }
 
 function pctChange(current: number | null | undefined, prev: number | null | undefined): number | undefined {
@@ -20,15 +25,66 @@ function pctChange(current: number | null | undefined, prev: number | null | und
   return ((current - prev) / prev) * 100
 }
 
-export function PulseView({ metrics, prevMetrics, activity: initialActivity }: Props) {
+export function PulseView({ metrics, prevMetrics, activity: initialActivity, directives: initialDirectives, clientId }: Props) {
   const realtimeActivity = useStore((s) => s.activity)
   const setActivity = useStore((s) => s.setActivity)
+  const storeDirectives = useStore((s) => s.directives)
+  const setDirectives = useStore((s) => s.setDirectives)
+  const dismissDirective = useStore((s) => s.dismissDirective)
+  const [refreshing, setRefreshing] = useState(false)
+
+  // Subscribe to realtime directive updates
+  useRealtimeDirectives(clientId)
 
   useEffect(() => {
     setActivity(initialActivity)
   }, [initialActivity, setActivity])
 
+  useEffect(() => {
+    setDirectives(initialDirectives)
+  }, [initialDirectives, setDirectives])
+
+  // Trigger background directive refresh if stale
+  useEffect(() => {
+    if (initialDirectives.length === 0 && !refreshing) {
+      setRefreshing(true)
+      fetch('/api/directives')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.directives?.length) setDirectives(data.directives)
+        })
+        .catch(() => {})
+        .finally(() => setRefreshing(false))
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const activity = realtimeActivity.length ? realtimeActivity : initialActivity
+  const directives = storeDirectives.length ? storeDirectives : initialDirectives
+
+  const handleDirectiveAction = useCallback(async (directive: Directive) => {
+    await fetch('/api/directives', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'act', directive_id: directive.id }),
+    })
+    // For now, navigate based on action type
+    if (directive.action_type === 'draft_lead_email' && directive.action_payload?.lead_id) {
+      window.location.href = `/leads/${directive.action_payload.lead_id}`
+    } else if (directive.action_type === 'view_details') {
+      window.location.href = directive.action_payload?.url as string ?? '/reports'
+    } else {
+      window.location.href = '/chat'
+    }
+  }, [])
+
+  const handleDismiss = useCallback(async (id: string) => {
+    dismissDirective(id)
+    await fetch('/api/directives', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'dismiss', directive_id: id }),
+    })
+  }, [dismissDirective])
 
   const leadsToday = metrics?.leads_captured ?? 0
   const responseTime = metrics?.avg_response_time_sec ?? null
@@ -44,6 +100,26 @@ export function PulseView({ metrics, prevMetrics, activity: initialActivity }: P
 
   return (
     <div className="space-y-6">
+      {/* Directives Section — Command Center */}
+      {directives.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <Sparkles size={12} className="text-gold" />
+            <div className="font-mono text-[10px] uppercase tracking-wider text-gold">Directives</div>
+          </div>
+          <div className="space-y-2.5">
+            {directives.map((d) => (
+              <DirectiveCard
+                key={d.id}
+                directive={d}
+                onAction={handleDirectiveAction}
+                onDismiss={handleDismiss}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       <section>
         <div className="mb-3 font-mono text-[10px] uppercase tracking-wider text-gold">Today</div>
         <div className="grid grid-cols-2 gap-3">

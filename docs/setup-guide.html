@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraFlow — System Setup Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030305; --bg2: #0c0a12; --bg3: #0f0d15; --bg4: #141220;
+            --accent: #8b5cf6; --accent-l: #a78bfa; --accent-b: #c4b5fd;
+            --glow: rgba(139,92,246,0.12); --glow2: rgba(139,92,246,0.25);
+            --t1: #faf5ff; --t2: #c4b5fd; --t3: #7c7291; --t4: #4a4458;
+            --b: rgba(139,92,246,0.1); --b2: rgba(139,92,246,0.3);
+            --ok: #10b981; --warn: #f59e0b; --err: #ef4444; --gold: #d4af37;
+            --fm: 'JetBrains Mono', monospace;
+            --f: 'Space Grotesk', sans-serif;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:var(--f); background:var(--bg); color:var(--t1); line-height:1.6; -webkit-font-smoothing:antialiased; }
+        .page { max-width:960px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+
+        /* ── HERO ── */
+        .hero { margin-bottom:2.5rem; }
+        .badge { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .7rem; background:var(--glow); border:1px solid var(--b2); border-radius:100px; font-size:.65rem; font-weight:600; color:var(--accent-b); text-transform:uppercase; letter-spacing:.1em; margin-bottom:.75rem; }
+        h1 { font-size:2rem; font-weight:700; letter-spacing:-1.5px; background:linear-gradient(135deg,#8b5cf6,#c4b5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .hero p { color:var(--t2); font-size:.95rem; margin-top:.5rem; max-width:540px; }
+
+        /* ── TOC ── */
+        .toc { background:var(--bg2); border:1px solid var(--b); border-radius:14px; padding:1.25rem 1.5rem; margin-bottom:2.5rem; }
+        .toc-title { font-family:var(--fm); font-size:.65rem; text-transform:uppercase; letter-spacing:.14em; color:var(--gold); margin-bottom:.75rem; }
+        .toc-list { list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:.3rem; }
+        @media(max-width:600px){ .toc-list { grid-template-columns:1fr; } }
+        .toc-list a { color:var(--t2); text-decoration:none; font-size:.85rem; display:flex; align-items:center; gap:.5rem; transition:.15s; }
+        .toc-list a:hover { color:var(--accent-b); }
+        .toc-num { font-family:var(--fm); font-size:.7rem; color:var(--t4); min-width:18px; }
+
+        /* ── SECTION ── */
+        .section { margin-bottom:3rem; }
+        .section-header { display:flex; align-items:center; gap:.75rem; margin-bottom:1.25rem; padding-bottom:.75rem; border-bottom:1px solid var(--b); }
+        .section-num { width:32px; height:32px; border-radius:50%; background:var(--glow); border:1px solid var(--b2); display:flex; align-items:center; justify-content:center; font-family:var(--fm); font-size:.75rem; color:var(--accent-b); flex-shrink:0; }
+        .section h2 { font-size:1.15rem; font-weight:600; color:var(--t1); }
+        .section h2 span { font-size:.8rem; font-weight:400; color:var(--t3); margin-left:.5rem; }
+        .section-desc { color:var(--t3); font-size:.875rem; margin-bottom:1.25rem; }
+
+        /* ── ENV TABLE ── */
+        .env-table { width:100%; border-collapse:collapse; font-size:.82rem; margin-bottom:1rem; }
+        .env-table th { font-family:var(--fm); font-size:.6rem; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); text-align:left; padding:.5rem .75rem; border-bottom:1px solid rgba(212,175,55,.2); }
+        .env-table td { padding:.5rem .75rem; border-bottom:1px solid var(--b); vertical-align:top; }
+        .env-table tr:last-child td { border-bottom:none; }
+        .env-table tr:hover td { background:rgba(139,92,246,0.04); }
+        .var-name { font-family:var(--fm); font-size:.72rem; color:var(--accent-b); white-space:nowrap; }
+        .var-where { font-family:var(--fm); font-size:.65rem; padding:.15rem .4rem; border-radius:4px; background:var(--glow); color:var(--t3); }
+        .var-where.prod { background:rgba(16,185,129,.08); color:var(--ok); }
+        .var-desc { color:var(--t2); font-size:.8rem; }
+        .var-source { color:var(--t4); font-size:.75rem; font-family:var(--fm); }
+
+        /* ── CODE BLOCK ── */
+        .code-block { background:var(--bg2); border:1px solid var(--b); border-radius:12px; overflow:hidden; margin:.75rem 0; }
+        .code-head { display:flex; align-items:center; justify-content:space-between; padding:.4rem .85rem; background:rgba(212,175,55,.04); border-bottom:1px solid rgba(212,175,55,.1); }
+        .code-head span { font-family:var(--fm); font-size:.62rem; color:var(--gold); text-transform:uppercase; letter-spacing:.08em; }
+        .cbtn { background:none; border:1px solid var(--b2); border-radius:4px; padding:.15rem .5rem; color:var(--t3); font-family:var(--fm); font-size:.6rem; cursor:pointer; transition:.2s; }
+        .cbtn:hover { color:var(--accent-b); border-color:var(--accent); }
+        .cbtn.ok { color:var(--ok); border-color:var(--ok); }
+        pre { padding:1.1rem; font-family:var(--fm); font-size:.77rem; line-height:1.75; color:var(--t2); overflow-x:auto; white-space:pre-wrap; }
+        code { font-family:var(--fm); font-size:.82rem; color:var(--accent-b); background:var(--glow); padding:.1rem .35rem; border-radius:4px; }
+
+        /* ── CHECKLIST ── */
+        .checklist { list-style:none; }
+        .checklist li { display:flex; align-items:flex-start; gap:.75rem; padding:.55rem 0; border-bottom:1px solid var(--b); }
+        .checklist li:last-child { border:none; }
+        .checklist li label { display:flex; align-items:flex-start; gap:.75rem; cursor:pointer; width:100%; }
+        .checklist li input[type=checkbox] { width:16px; height:16px; accent-color:var(--accent); margin-top:.15rem; flex-shrink:0; cursor:pointer; }
+        .checklist li .step-text { font-size:.875rem; color:var(--t2); flex:1; }
+        .checklist li .step-text strong { color:var(--t1); display:block; }
+        .checklist li .step-text .note { color:var(--t4); font-size:.78rem; margin-top:.1rem; font-family:var(--fm); }
+        .checklist li input:checked ~ .step-text { opacity:.45; text-decoration:line-through; text-decoration-color:var(--t4); }
+
+        /* ── CARDS ── */
+        .card-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:.75rem 0; }
+        @media(max-width:600px){ .card-grid { grid-template-columns:1fr; } }
+        .card { background:var(--bg2); border:1px solid var(--b); border-radius:12px; padding:1rem; }
+        .card-title { font-family:var(--fm); font-size:.65rem; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); margin-bottom:.5rem; }
+        .card p { font-size:.82rem; color:var(--t3); }
+        .card .val { font-family:var(--fm); font-size:.8rem; color:var(--accent-b); margin-top:.3rem; word-break:break-all; }
+
+        /* ── WORKFLOW TABLE ── */
+        .wf-table { width:100%; border-collapse:collapse; font-size:.82rem; margin:.75rem 0; }
+        .wf-table th { font-family:var(--fm); font-size:.6rem; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); text-align:left; padding:.5rem .75rem; border-bottom:1px solid rgba(212,175,55,.2); }
+        .wf-table td { padding:.5rem .75rem; border-bottom:1px solid var(--b); }
+        .wf-table tr:last-child td { border:none; }
+        .wf-name { font-weight:600; color:var(--t1); }
+        .wf-id { font-family:var(--fm); font-size:.7rem; color:var(--t3); }
+        .wf-url { font-family:var(--fm); font-size:.7rem; color:var(--accent-b); }
+        .status-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:.4rem; }
+        .status-dot.ok { background:var(--ok); }
+        .status-dot.warn { background:var(--warn); }
+
+        /* ── INFO CALLOUT ── */
+        .info { display:flex; gap:.75rem; padding:.85rem 1rem; background:rgba(139,92,246,.06); border:1px solid var(--b2); border-radius:10px; margin:.75rem 0; }
+        .info-icon { font-size:.95rem; flex-shrink:0; }
+        .info p { font-size:.82rem; color:var(--t2); }
+        .info p strong { color:var(--t1); }
+        .warn-box { background:rgba(245,158,11,.06); border-color:rgba(245,158,11,.25); }
+        .warn-box p { color:var(--warn); }
+
+        /* ── SUPABASE TABLE LIST ── */
+        .table-list { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.5rem; margin:.75rem 0; }
+        @media(max-width:600px){ .table-list { grid-template-columns:1fr 1fr; } }
+        .table-pill { display:flex; align-items:center; gap:.4rem; padding:.35rem .65rem; background:var(--bg2); border:1px solid var(--b); border-radius:8px; font-family:var(--fm); font-size:.7rem; color:var(--t2); }
+        .table-pill .dot { width:6px; height:6px; border-radius:50%; background:var(--ok); flex-shrink:0; }
+        .table-pill .dot.needed { background:var(--warn); }
+
+        /* ── SEPARATOR ── */
+        hr { border:none; border-top:1px solid var(--b); margin:2rem 0; }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- ── HERO ── -->
+    <header class="hero">
+        <div class="badge">AuraFlow Internal</div>
+        <h1>System Setup Guide</h1>
+        <p>Everything needed to deploy and operate AuraFlow end-to-end — env vars, Supabase, Vercel, n8n, client onboarding, and local dev.</p>
+    </header>
+
+    <!-- ── TOC ── -->
+    <div class="toc">
+        <div class="toc-title">Sections</div>
+        <ul class="toc-list">
+            <li><a href="#env"><span class="toc-num">01</span>Environment Variables</a></li>
+            <li><a href="#supabase"><span class="toc-num">02</span>Supabase Setup</a></li>
+            <li><a href="#vercel"><span class="toc-num">03</span>Vercel Deployment</a></li>
+            <li><a href="#n8n"><span class="toc-num">04</span>n8n Workflows</a></li>
+            <li><a href="#onboarding"><span class="toc-num">05</span>Onboarding a New Client</a></li>
+            <li><a href="#mempalace"><span class="toc-num">06</span>mempalace (Claude Memory)</a></li>
+            <li><a href="#localdev"><span class="toc-num">07</span>Local Development</a></li>
+        </ul>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- 01 — ENV VARS                                  -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section" id="env">
+        <div class="section-header">
+            <div class="section-num">01</div>
+            <h2>Environment Variables <span>13 vars total</span></h2>
+        </div>
+        <p class="section-desc">Set these in two places: <code>.env.local</code> for local dev, and Vercel → Settings → Environment Variables for production. All values marked <strong>Both</strong> are required in both contexts.</p>
+
+        <table class="env-table">
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Context</th>
+                    <th>Value / Source</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="var-name">NEXT_PUBLIC_SUPABASE_URL</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Your Supabase project URL</div>
+                        <div class="var-source">https://bfzdcyuyilesubtgbhdc.supabase.co</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">NEXT_PUBLIC_SUPABASE_ANON_KEY</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Public anon key — safe for browser</div>
+                        <div class="var-source">Supabase → Settings → API → anon public</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">SUPABASE_SERVICE_ROLE_KEY</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Service role key — bypasses RLS. Never expose to browser.</div>
+                        <div class="var-source">Supabase → Settings → API → service_role (use legacy JWT)</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">ANTHROPIC_API_KEY</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Used by chat API route and intelligence bridge</div>
+                        <div class="var-source">console.anthropic.com → API Keys</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">WEBHOOK_SECRET</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Shared secret for all n8n → app webhook calls. Must match header value in every n8n workflow.</div>
+                        <div class="var-source">Generate: <code>openssl rand -hex 32</code></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">ADMIN_SECRET</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Protects <code>/api/admin/onboard</code>. Enter this in the onboarding generator prompt.</div>
+                        <div class="var-source">Generate: <code>openssl rand -hex 32</code></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">VAPID_PUBLIC_KEY</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">VAPID key for push notifications (server-side)</div>
+                        <div class="var-source">Generate once: <code>npx web-push generate-vapid-keys</code></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">VAPID_PRIVATE_KEY</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">VAPID private key — never expose to browser</div>
+                        <div class="var-source">Same command as above</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">VAPID_EMAIL</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Contact email for push service</div>
+                        <div class="var-source">mailto:you@auraflowusa.com</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">NEXT_PUBLIC_VAPID_PUBLIC_KEY</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Same value as VAPID_PUBLIC_KEY — exposed to service worker</div>
+                        <div class="var-source">Copy from VAPID_PUBLIC_KEY</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">NEXT_PUBLIC_APP_URL</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Full app URL — used for push subscription and redirects</div>
+                        <div class="var-source">https://app.auraflowusa.com (or http://localhost:3000)</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">UPSTASH_REDIS_REST_URL</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Redis endpoint for API rate limiting on <code>/api/scan</code></div>
+                        <div class="var-source">upstash.com → your database → REST API</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><span class="var-name">UPSTASH_REDIS_REST_TOKEN</span></td>
+                    <td><span class="var-where">Both</span></td>
+                    <td>
+                        <div class="var-desc">Redis auth token</div>
+                        <div class="var-source">Same page as URL above</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="code-block">
+            <div class="code-head"><span>.env.local template</span><button class="cbtn" onclick="cc(this,'env-tmpl')">Copy</button></div>
+            <pre id="env-tmpl">NEXT_PUBLIC_SUPABASE_URL=https://bfzdcyuyilesubtgbhdc.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+ANTHROPIC_API_KEY=
+WEBHOOK_SECRET=
+ADMIN_SECRET=
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_EMAIL=mailto:you@auraflowusa.com
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=</pre>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- 02 — SUPABASE                                  -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section" id="supabase">
+        <div class="section-header">
+            <div class="section-num">02</div>
+            <h2>Supabase Setup <span>11 tables</span></h2>
+        </div>
+        <p class="section-desc">All tables live in the Supabase project at <code>bfzdcyuyilesubtgbhdc</code>. Run the schema SQL once, then enable Realtime on 3 tables.</p>
+
+        <div class="table-list">
+            <div class="table-pill"><span class="dot"></span>client_profiles</div>
+            <div class="table-pill"><span class="dot"></span>daily_metrics</div>
+            <div class="table-pill"><span class="dot"></span>agent_activity</div>
+            <div class="table-pill"><span class="dot"></span>chat_messages</div>
+            <div class="table-pill"><span class="dot"></span>notifications</div>
+            <div class="table-pill"><span class="dot"></span>hierarchy_nodes</div>
+            <div class="table-pill"><span class="dot"></span>lead_interactions</div>
+            <div class="table-pill"><span class="dot"></span>lead_analyses</div>
+            <div class="table-pill"><span class="dot"></span>directives</div>
+            <div class="table-pill"><span class="dot"></span>chat_context</div>
+            <div class="table-pill"><span class="dot"></span>push_subscriptions</div>
+        </div>
+
+        <ul class="checklist" id="supabase-checklist">
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('sb1',this.checked)">
+                    <span class="step-text">
+                        <strong>Run schema SQL</strong>
+                        <span class="note">supabase.com/dashboard/project/bfzdcyuyilesubtgbhdc/sql → paste docs/supabase-schema.sql → Run</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('sb2',this.checked)">
+                    <span class="step-text">
+                        <strong>Enable Realtime on 3 tables</strong>
+                        <span class="note">Database → Replication → enable for: agent_activity, notifications, directives</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('sb3',this.checked)">
+                    <span class="step-text">
+                        <strong>Verify RLS is enabled</strong>
+                        <span class="note">Authentication → Policies → confirm every table has RLS enabled</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('sb4',this.checked)">
+                    <span class="step-text">
+                        <strong>Copy service_role key (legacy JWT)</strong>
+                        <span class="note">Settings → API → service_role → use the JWT format, not the new format</span>
+                    </span>
+                </label>
+            </li>
+        </ul>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- 03 — VERCEL                                    -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section" id="vercel">
+        <div class="section-header">
+            <div class="section-num">03</div>
+            <h2>Vercel Deployment</h2>
+        </div>
+        <p class="section-desc">The app auto-deploys on every push to <code>main</code>. Initial setup only needs to happen once.</p>
+
+        <ul class="checklist">
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('v1',this.checked)">
+                    <span class="step-text">
+                        <strong>Push repo to GitHub</strong>
+                        <span class="note">github.com → New repo → push local main branch</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('v2',this.checked)">
+                    <span class="step-text">
+                        <strong>Import project in Vercel</strong>
+                        <span class="note">vercel.com/new → Import Git Repository → select your repo → Framework: Next.js</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('v3',this.checked)">
+                    <span class="step-text">
+                        <strong>Add all 13 env vars</strong>
+                        <span class="note">Settings → Environment Variables → add each var from Section 01 above</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('v4',this.checked)">
+                    <span class="step-text">
+                        <strong>Deploy</strong>
+                        <span class="note">Deployments → Redeploy (or push a commit) — build should complete in ~2 min</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('v5',this.checked)">
+                    <span class="step-text">
+                        <strong>Set custom domain</strong>
+                        <span class="note">Settings → Domains → add app.auraflowusa.com → add CNAME record at your DNS provider pointing to cname.vercel-dns.com</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('v6',this.checked)">
+                    <span class="step-text">
+                        <strong>Verify live at https://app.auraflowusa.com</strong>
+                        <span class="note">Open the URL — login page should appear with magic link form</span>
+                    </span>
+                </label>
+            </li>
+        </ul>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- 04 — N8N                                       -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section" id="n8n">
+        <div class="section-header">
+            <div class="section-num">04</div>
+            <h2>n8n Workflows <span>5 base workflows</span></h2>
+        </div>
+        <p class="section-desc">Five workflows are already live in the Auraflow n8n project. These are the <em>base</em> workflows — duplicate them for each new client and update the <code>client_id</code>.</p>
+
+        <div class="info">
+            <span class="info-icon">🔐</span>
+            <p>Every n8n HTTP Request node that calls the app must include header: <strong>Authorization: Bearer &lt;WEBHOOK_SECRET&gt;</strong> — the same value set in Vercel env vars.</p>
+        </div>
+
+        <table class="wf-table">
+            <thead>
+                <tr>
+                    <th>Workflow</th>
+                    <th>ID</th>
+                    <th>Trigger / Endpoint</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="wf-name">WF-LEADS-01</span><br><span style="color:var(--t4);font-size:.75rem">Lead Capture Sync</span></td>
+                    <td><span class="wf-id">M426MhAVRlz7wxNB</span></td>
+                    <td><span class="wf-url">POST /webhook/wf-leads-01</span></td>
+                    <td><span class="status-dot ok"></span><span style="font-size:.8rem;color:var(--ok)">Live</span></td>
+                </tr>
+                <tr>
+                    <td><span class="wf-name">WF-METRICS-01</span><br><span style="color:var(--t4);font-size:.75rem">Daily Metrics Push</span></td>
+                    <td><span class="wf-id">s2OAMJzhGsZrh4R8</span></td>
+                    <td><span class="wf-url">Cron 23:55 daily</span></td>
+                    <td><span class="status-dot ok"></span><span style="font-size:.8rem;color:var(--ok)">Live</span></td>
+                </tr>
+                <tr>
+                    <td><span class="wf-name">WF-AGENTS-01</span><br><span style="color:var(--t4);font-size:.75rem">Log Agent Activity</span></td>
+                    <td><span class="wf-id">mo2zSAhw59sfxzzh</span></td>
+                    <td><span class="wf-url">POST /webhook/wf-agents-log</span></td>
+                    <td><span class="status-dot ok"></span><span style="font-size:.8rem;color:var(--ok)">Live</span></td>
+                </tr>
+                <tr>
+                    <td><span class="wf-name">WF-NOTIFY-01</span><br><span style="color:var(--t4);font-size:.75rem">Push Notification</span></td>
+                    <td><span class="wf-id">NwhqiE1SDE2KJllC</span></td>
+                    <td><span class="wf-url">POST /webhook/wf-notify-01</span></td>
+                    <td><span class="status-dot ok"></span><span style="font-size:.8rem;color:var(--ok)">Live</span></td>
+                </tr>
+                <tr>
+                    <td><span class="wf-name">WF-CONTENT-01</span><br><span style="color:var(--t4);font-size:.75rem">Content Production</span></td>
+                    <td><span class="wf-id">tQMH5ac04P4kZMCt</span></td>
+                    <td><span class="wf-url">POST /webhook/content-trigger</span></td>
+                    <td><span class="status-dot warn"></span><span style="font-size:.8rem;color:var(--warn)">Needs Anthropic cred</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="info warn-box">
+            <span class="info-icon">⚠</span>
+            <p><strong>WF-CONTENT-01 pending:</strong> Open each of the 4 AI nodes → link your Anthropic API credential → save and activate.</p>
+        </div>
+
+        <div style="margin-top:1.25rem">
+            <div style="font-family:var(--fm);font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:.6rem">App webhook endpoints (all require Authorization header)</div>
+            <div class="code-block">
+                <div class="code-head"><span>Inbound webhook URLs</span><button class="cbtn" onclick="cc(this,'wh-urls')">Copy</button></div>
+                <pre id="wh-urls">POST https://app.auraflowusa.com/api/webhooks/lead
+POST https://app.auraflowusa.com/api/webhooks/metric
+POST https://app.auraflowusa.com/api/webhooks/agent
+POST https://app.auraflowusa.com/api/webhooks/notification</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- 05 — ONBOARDING                               -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section" id="onboarding">
+        <div class="section-header">
+            <div class="section-num">05</div>
+            <h2>Onboarding a New Client <span>~25 min per client</span></h2>
+        </div>
+        <p class="section-desc">Use the onboarding generator tool to create the client in one click. No Supabase dashboard required — the API handles all table inserts.</p>
+
+        <div class="card-grid">
+            <div class="card">
+                <div class="card-title">Onboarding Tool</div>
+                <p>Open this file in your browser</p>
+                <div class="val">docs/client-onboarding-generator.html</div>
+            </div>
+            <div class="card">
+                <div class="card-title">What the API creates</div>
+                <p>clients · client_profiles · hierarchy_nodes · daily_metrics · notifications · agent_activity</p>
+            </div>
+        </div>
+
+        <ul class="checklist">
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob1',this.checked)">
+                    <span class="step-text">
+                        <strong>Open docs/client-onboarding-generator.html in browser</strong>
+                        <span class="note">Enter ADMIN_SECRET when prompted</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob2',this.checked)">
+                    <span class="step-text">
+                        <strong>Fill in client details → click Create Client in AuraFlow →</strong>
+                        <span class="note">Business name, contact info, industry, scores, hierarchy layers</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob3',this.checked)">
+                    <span class="step-text">
+                        <strong>Copy the returned client_id</strong>
+                        <span class="note">You'll need this for n8n workflows and the user_id link step</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob4',this.checked)">
+                    <span class="step-text">
+                        <strong>Send magic link to client email</strong>
+                        <span class="note">Supabase → Authentication → Users → Invite user (enter client email)</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob5',this.checked)">
+                    <span class="step-text">
+                        <strong>After client clicks magic link and signs up — link their auth user</strong>
+                        <span class="note">Supabase → Auth → Users → copy their UUID → run SQL below</span>
+                    </span>
+                </label>
+            </li>
+        </ul>
+
+        <div class="code-block" style="margin-top:.75rem">
+            <div class="code-head"><span>Link auth user (run in SQL Editor)</span><button class="cbtn" onclick="cc(this,'link-sql')">Copy</button></div>
+            <pre id="link-sql">UPDATE client_profiles
+SET user_id = '&lt;auth_uuid_from_supabase&gt;'
+WHERE client_id = '&lt;client_id_from_generator&gt;';</pre>
+        </div>
+
+        <ul class="checklist" style="margin-top:1rem">
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob6',this.checked)">
+                    <span class="step-text">
+                        <strong>Duplicate WF-LEADS-01 in n8n → update client_id → activate</strong>
+                        <span class="note">Open workflow → duplicate → find client_id field in HTTP Body → replace → save → toggle Active</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob7',this.checked)">
+                    <span class="step-text">
+                        <strong>Duplicate WF-METRICS-01 → update CLIENT_ID in Code node → activate</strong>
+                        <span class="note">Open Code node → change CLIENT_ID constant → save → activate</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob8',this.checked)">
+                    <span class="step-text">
+                        <strong>Duplicate remaining workflows (WF-AGENTS-01, WF-NOTIFY-01, WF-CONTENT-01) → update client_id → activate</strong>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob9',this.checked)">
+                    <span class="step-text">
+                        <strong>Connect client's lead source to new WF-LEADS-01 webhook URL</strong>
+                        <span class="note">Angi / Google LSA / website form → POST to the new workflow's webhook URL with Authorization header</span>
+                    </span>
+                </label>
+            </li>
+            <li>
+                <label>
+                    <input type="checkbox" onchange="save('ob10',this.checked)">
+                    <span class="step-text">
+                        <strong>Send a test lead — confirm it appears in the app</strong>
+                        <span class="note">Use curl or Postman to POST a test lead → check app.auraflowusa.com → Leads</span>
+                    </span>
+                </label>
+            </li>
+        </ul>
+
+        <div class="code-block" style="margin-top:.75rem">
+            <div class="code-head"><span>Test lead — curl</span><button class="cbtn" onclick="cc(this,'test-lead')">Copy</button></div>
+            <pre id="test-lead">curl -X POST https://app.auraflowusa.com/api/webhooks/lead \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer &lt;WEBHOOK_SECRET&gt;" \
+  -d '{
+    "client_id": "&lt;client_id&gt;",
+    "name": "Test Lead",
+    "email": "test@example.com",
+    "phone": "555-0100",
+    "source": "angi",
+    "service_requested": "Generator Installation",
+    "estimated_value": 2500
+  }'</pre>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- 06 — MEMPALACE                                 -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section" id="mempalace">
+        <div class="section-header">
+            <div class="section-num">06</div>
+            <h2>mempalace <span>Claude Code memory</span></h2>
+        </div>
+        <p class="section-desc">mempalace gives Claude Code semantic memory of the codebase using ChromaDB + SQLite. After setup, Claude can search past decisions, architecture notes, and client context across sessions. Run these commands once in Terminal.</p>
+
+        <div class="info">
+            <span class="info-icon">💡</span>
+            <p>These commands must be run manually in your terminal — they require interactive input and cannot be automated from Claude Code.</p>
+        </div>
+
+        <div class="code-block">
+            <div class="code-head"><span>Step 1 — Install</span><button class="cbtn" onclick="cc(this,'mp1')">Copy</button></div>
+            <pre id="mp1">pip3 install mempalace</pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-head"><span>Step 2 — Initialize (run in Terminal, not Claude Code)</span><button class="cbtn" onclick="cc(this,'mp2')">Copy</button></div>
+            <pre id="mp2">python3 -m mempalace init /Users/motalebi/Downloads/auraflow-client-app</pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-head"><span>Step 3 — Index codebase</span><button class="cbtn" onclick="cc(this,'mp3')">Copy</button></div>
+            <pre id="mp3">python3 -m mempalace mine</pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-head"><span>Step 4 — Register MCP server with Claude Code</span><button class="cbtn" onclick="cc(this,'mp4')">Copy</button></div>
+            <pre id="mp4">claude mcp add mempalace -- python3 -m mempalace.mcp_server</pre>
+        </div>
+
+        <div class="info" style="margin-top:.75rem">
+            <span class="info-icon">✓</span>
+            <p>After setup: Claude Code has <strong>19 memory tools</strong> — search, store, and retrieve knowledge about the codebase and clients across all sessions. The memory palace uses Wings → Rooms → Halls → Closets → Drawers → Tunnels hierarchy.</p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- 07 — LOCAL DEV                                 -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section" id="localdev">
+        <div class="section-header">
+            <div class="section-num">07</div>
+            <h2>Local Development</h2>
+        </div>
+        <p class="section-desc">Standard Next.js dev flow. Requires Node 18+ and npm.</p>
+
+        <div class="code-block">
+            <div class="code-head"><span>First time setup</span><button class="cbtn" onclick="cc(this,'local1')">Copy</button></div>
+            <pre id="local1">git clone &lt;your-repo-url&gt; auraflow-client-app
+cd auraflow-client-app
+npm install
+cp .env.example .env.local
+# Fill in all 13 env vars in .env.local
+npm run dev
+# Open http://localhost:3000</pre>
+        </div>
+
+        <div class="code-block" style="margin-top:.75rem">
+            <div class="code-head"><span>Day-to-day</span><button class="cbtn" onclick="cc(this,'local2')">Copy</button></div>
+            <pre id="local2">npm run dev          # start dev server (hot reload)
+npm run build        # production build — verify 0 errors before deploying
+npm run lint         # check for type errors</pre>
+        </div>
+
+        <div style="margin-top:1.25rem">
+            <div style="font-family:var(--fm);font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:.6rem">Key directories</div>
+            <div class="code-block">
+                <div class="code-head"><span>Project structure</span></div>
+                <pre>src/app/(dashboard)/        — all client-facing pages
+src/app/api/               — all API routes
+src/components/ui/         — shared components
+src/lib/intelligence/      — Claude bridge (server-only)
+src/lib/supabase/          — Supabase clients (browser + service)
+src/hooks/                 — React hooks
+src/lib/store.ts           — Zustand global state
+docs/                      — internal tools + schema SQL
+worker/index.js            — service worker push handler</pre>
+            </div>
+        </div>
+
+        <div class="info" style="margin-top:1rem">
+            <span class="info-icon">📄</span>
+            <p>Full API endpoint specs: <code>docs/api-routes.md</code> · Full screen specs: <code>docs/app-blueprint.md</code> · Database schema: <code>docs/supabase-schema.sql</code></p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── Persist checklist state ──────────────────────────
+function save(key, val) {
+    localStorage.setItem('af_setup_' + key, val ? '1' : '0')
+}
+
+function restore() {
+    document.querySelectorAll('input[type=checkbox][onchange]').forEach(cb => {
+        const match = cb.getAttribute('onchange').match(/'([^']+)'/)
+        if (!match) return
+        const key = match[1]
+        const val = localStorage.getItem('af_setup_' + key)
+        if (val === '1') cb.checked = true
+    })
+}
+
+// ── Copy to clipboard ────────────────────────────────
+function cc(btn, id) {
+    const el = document.getElementById(id)
+    const text = el ? el.textContent : ''
+    navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✓ Copied'
+        btn.classList.add('ok')
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok') }, 2000)
+    })
+}
+
+// ── Smooth scroll for TOC links ──────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        e.preventDefault()
+        const target = document.querySelector(a.getAttribute('href'))
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+})
+
+restore()
+</script>
+</body>
+</html>

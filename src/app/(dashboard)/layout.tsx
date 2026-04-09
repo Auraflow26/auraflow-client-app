@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { BottomNav } from '@/components/ui/BottomNav'
 import { AppProvider } from '@/components/layout/AppProvider'
+import { PushSubscriptionInit } from '@/components/layout/PushSubscriptionInit'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import type { ClientProfile } from '@/lib/types'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -28,10 +30,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <AppProvider profile={profile as ClientProfile}>
-      <div className="radial-glow min-h-screen">
-        {children}
-        <BottomNav />
-      </div>
+      <ErrorBoundary>
+        <div className="radial-glow min-h-screen">
+          {children}
+          <BottomNav />
+          <PushSubscriptionInit />
+        </div>
+      </ErrorBoundary>
     </AppProvider>
   )
 }

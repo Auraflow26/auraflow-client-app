@@ -120,6 +120,23 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
     sendMessage(input)
   }
 
+  // Execute chat actions via the bridge
+  async function executeAction(action: string, payload?: Record<string, unknown>) {
+    try {
+      const res = await fetch('/api/chat/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, payload }),
+      })
+      const data = await res.json()
+      if (data.result) {
+        sendMessage(`Action "${action}" completed. Show me the result.`)
+      }
+    } catch {
+      sendMessage(`I tried to execute "${action}" but encountered an error.`)
+    }
+  }
+
   const isEmpty = messages.length === 0
 
   return (
@@ -167,7 +184,7 @@ export function ChatView({ initialMessages }: { initialMessages: ChatMessage[] }
         ) : (
           <div className="space-y-3">
             {messages.map((m) => (
-              <ChatBubble key={m.id} message={m} onAction={sendMessage} />
+              <ChatBubble key={m.id} message={m} onAction={executeAction} />
             ))}
             {sending && messages[messages.length - 1]?.content === '' && (
               <div className="flex justify-start">

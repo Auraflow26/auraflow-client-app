@@ -16,8 +16,15 @@ const filters: { key: Filter; label: string }[] = [
   { key: 'lost', label: 'Lost' },
 ]
 
-export function LeadsView({ leads }: { leads: Lead[] }) {
+export function LeadsView({ leads: initialLeads }: { leads: Lead[] }) {
   const [filter, setFilter] = useState<Filter>('all')
+  const [leads, setLeads] = useState<Lead[]>(initialLeads)
+
+  function handleStatusAdvance(id: string, newStatus: LeadStatus) {
+    setLeads(prev =>
+      prev.map(l => l.id === id ? { ...l, status: newStatus } : l)
+    )
+  }
 
   const filtered = filter === 'all' ? leads : leads.filter((l) => l.status === filter)
 
@@ -29,6 +36,7 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
             const active = filter === f.key
             return (
               <button
+                type="button"
                 key={f.key}
                 onClick={() => setFilter(f.key)}
                 className={cn(
@@ -54,7 +62,7 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
       ) : (
         <div className="space-y-3">
           {filtered.map((lead) => (
-            <LeadCard key={lead.id} lead={lead} />
+            <LeadCard key={lead.id} lead={lead} onStatusAdvance={handleStatusAdvance} />
           ))}
         </div>
       )}

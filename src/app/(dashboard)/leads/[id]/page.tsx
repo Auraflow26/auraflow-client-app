@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { ArrowLeft, Phone, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/layout/DashboardShell'
 import { Badge } from '@/components/ui/Badge'
 import { LeadStatusUpdate } from './LeadStatusUpdate'
+import { LeadAnalysisPanel } from '@/components/ui/LeadAnalysisPanel'
 import {
   formatCurrency,
   formatDate,
@@ -12,27 +13,37 @@ import {
   timeAgo,
 } from '@/lib/utils'
 import { LEAD_SOURCES, type Lead, type ClientProfile } from '@/lib/types'
+import type { LeadAnalysis } from '@/lib/intelligence/types'
 
 export const dynamic = 'force-dynamic'
 
 export default async function LeadDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('client_profiles')
     .select('*')
     .eq('user_id', user.id)
     .single<ClientProfile>()
-  if (!profile) return null
+  if (!profile) redirect('/login')
 
-  const { data: lead } = await supabase
-    .from('lead_interactions')
-    .select('*')
-    .eq('id', params.id)
-    .eq('client_id', profile.client_id)
-    .single<Lead>()
+  const [{ data: lead }, { data: analysis }] = await Promise.all([
+    supabase
+      .from('lead_interactions')
+      .select('*')
+      .eq('id', params.id)
+      .eq('client_id', profile.client_id)
+      .single<Lead>(),
+    supabase
+      .from('lead_analyses')
+      .select('*')
+      .eq('lead_id', params.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<LeadAnalysis>(),
+  ])
 
   if (!lead) notFound()
 
@@ -133,6 +144,10 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
               </div>
             </div>
           </section>
+
+          {analysis && (
+            <LeadAnalysisPanel analysis={analysis} />
+          )}
 
           <section>
             <LeadStatusUpdate leadId={lead.id} currentStatus={lead.status} />

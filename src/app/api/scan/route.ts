@@ -4,6 +4,8 @@
 
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
 import { runLighthouse, lighthouseToDataPoints } from '@/lib/scraping/lighthouse'
 import { analyzeWebsite, structureToDataPoints } from '@/lib/scraping/website-analyzer'
 import { calculateFoundationScore, calculateComplexityScore } from '@/lib/scoring/foundation-score'
@@ -13,34 +15,30 @@ import type { Vertical, PreScanResult } from '@/lib/types'
 export const runtime = 'nodejs'
 export const maxDuration = 45
 
-const RATE_LIMIT_WINDOW = 3600 // 1 hour in seconds
-const RATE_LIMIT_MAX = 10
-
-// Simple in-memory rate limit (replace with Redis in production)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now() / 1000
-  const entry = rateLimitMap.get(ip)
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
-    return true
+// Redis-backed rate limit: survives cold starts, shared across all instances
+function getRatelimiter() {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return null // Fall back to allowing the request if Redis not configured
   }
-
-  if (entry.count >= RATE_LIMIT_MAX) return false
-  entry.count++
-  return true
+  return new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(10, '1 h'),
+    prefix: 'auraflow:scan',
+  })
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for') ?? 'unknown'
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown'
 
-  if (!checkRateLimit(ip)) {
-    return Response.json(
-      { error: 'Rate limit exceeded. Please try again in an hour.' },
-      { status: 429 }
-    )
+  const ratelimiter = getRatelimiter()
+  if (ratelimiter) {
+    const { success } = await ratelimiter.limit(ip)
+    if (!success) {
+      return Response.json(
+        { error: 'Rate limit exceeded. Please try again in an hour.' },
+        { status: 429 }
+      )
+    }
   }
 
   try {

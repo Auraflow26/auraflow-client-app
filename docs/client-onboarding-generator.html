@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraFlow — Client Onboarding</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030305; --bg2: #0c0a12; --bg3: #0f0d15; --bg4: #141220;
+            --accent: #8b5cf6; --accent-l: #a78bfa; --accent-b: #c4b5fd;
+            --glow: rgba(139,92,246,0.12); --glow2: rgba(139,92,246,0.25);
+            --t1: #faf5ff; --t2: #c4b5fd; --t3: #7c7291; --t4: #4a4458;
+            --b: rgba(139,92,246,0.1); --b2: rgba(139,92,246,0.3);
+            --ok: #10b981; --warn: #f59e0b; --err: #ef4444; --gold: #d4af37;
+            --fm: 'JetBrains Mono', monospace;
+            --f: 'Space Grotesk', sans-serif;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:var(--f); background:var(--bg); color:var(--t1); line-height:1.6; -webkit-font-smoothing:antialiased; }
+        .page { max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 5rem; }
+
+        .hero { margin-bottom:2rem; }
+        .badge { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .7rem; background:var(--glow); border:1px solid var(--b2); border-radius:100px; font-size:.65rem; font-weight:600; color:var(--accent-b); text-transform:uppercase; letter-spacing:.1em; margin-bottom:.75rem; }
+        h1 { font-size:1.75rem; font-weight:700; letter-spacing:-1px; background:linear-gradient(135deg,#8b5cf6,#c4b5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .hero p { color:var(--t2); font-size:.9rem; margin-top:.4rem; }
+
+        .grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.5rem; }
+        @media(max-width:600px){ .grid { grid-template-columns:1fr; } }
+        .grid-3 { grid-column: span 2; }
+        @media(max-width:600px){ .grid-3 { grid-column: span 1; } }
+
+        .section-label { font-family:var(--fm); font-size:.65rem; text-transform:uppercase; letter-spacing:.14em; color:var(--gold); margin-bottom:.6rem; margin-top:1.5rem; }
+
+        .field { display:flex; flex-direction:column; gap:.4rem; }
+        label { font-size:.8rem; color:var(--t2); font-weight:500; }
+        label span { color:var(--t4); font-size:.75rem; font-weight:400; }
+        input, select, textarea {
+            background:var(--bg2); border:1px solid var(--b); border-radius:10px;
+            padding:.6rem .8rem; color:var(--t1); font-family:var(--f); font-size:.875rem;
+            transition:.2s; outline:none;
+        }
+        input:focus, select:focus, textarea:focus { border-color:var(--b2); }
+        input::placeholder, textarea::placeholder { color:var(--t4); }
+        select option { background:var(--bg2); }
+        textarea { resize:vertical; min-height:70px; }
+
+        .hierarchy-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.6rem; }
+        @media(max-width:600px){ .hierarchy-grid { grid-template-columns:1fr 1fr; } }
+        .layer-item { display:flex; flex-direction:column; gap:.3rem; }
+        .layer-item label { font-size:.72rem; color:var(--t3); font-family:var(--fm); }
+        .layer-item input { font-size:.78rem; padding:.45rem .65rem; }
+        .layer-toggle { display:flex; align-items:center; gap:.4rem; font-size:.75rem; color:var(--t3); cursor:pointer; margin-top:.2rem; }
+        .layer-toggle input[type=checkbox] { width:14px; height:14px; accent-color:var(--accent); cursor:pointer; }
+
+        .generate-btn {
+            width:100%; padding:.9rem; background:var(--accent); border:none; border-radius:12px;
+            color:#fff; font-family:var(--f); font-size:.95rem; font-weight:600;
+            cursor:pointer; transition:.2s; margin-top:1.5rem;
+        }
+        .generate-btn:hover { opacity:.9; }
+
+        .output-section { margin-top:2rem; display:none; }
+        .output-section.visible { display:block; }
+
+        .sql-block { background:var(--bg2); border:1px solid var(--b); border-radius:12px; overflow:hidden; margin-bottom:1rem; }
+        .sql-head { display:flex; align-items:center; justify-content:space-between; padding:.45rem .85rem; background:rgba(212,175,55,.04); border-bottom:1px solid rgba(212,175,55,.15); }
+        .sql-head span { font-family:var(--fm); font-size:.65rem; color:var(--gold); text-transform:uppercase; letter-spacing:.08em; }
+        .cbtn { background:none; border:1px solid var(--b2); border-radius:4px; padding:.15rem .5rem; color:var(--t3); font-family:var(--fm); font-size:.6rem; cursor:pointer; transition:.2s; }
+        .cbtn:hover { color:var(--accent-b); border-color:var(--accent); }
+        .cbtn.ok { color:var(--ok); border-color:var(--ok); }
+        pre { padding:1.1rem; font-family:var(--fm); font-size:.75rem; line-height:1.7; color:var(--t2); overflow-x:auto; white-space:pre-wrap; }
+
+        .n8n-block { background:var(--bg2); border:1px solid var(--b); border-radius:12px; padding:1.1rem; margin-bottom:1rem; }
+        .n8n-block h3 { font-size:.85rem; font-weight:600; margin-bottom:.75rem; color:var(--t1); }
+        .kv { display:flex; align-items:flex-start; gap:.5rem; margin-bottom:.4rem; font-size:.8rem; }
+        .kv .k { color:var(--t3); font-family:var(--fm); font-size:.72rem; min-width:160px; padding-top:.1rem; }
+        .kv .v { color:var(--accent-b); font-family:var(--fm); font-size:.72rem; word-break:break-all; }
+
+        .checklist { list-style:none; }
+        .checklist li { display:flex; align-items:flex-start; gap:.6rem; padding:.4rem 0; border-bottom:1px solid var(--b); font-size:.85rem; color:var(--t2); }
+        .checklist li:last-child { border:none; }
+        .checklist li::before { content:'○'; color:var(--t4); font-size:.8rem; margin-top:.1rem; flex-shrink:0; }
+        .checklist li strong { color:var(--t1); }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <header class="hero">
+        <div class="badge">AuraFlow Internal Tool</div>
+        <h1>Client Onboarding Generator</h1>
+        <p>Fill in the form → get ready-to-run SQL + n8n config for any new client.</p>
+    </header>
+
+    <form id="form">
+
+        <!-- ── BUSINESS INFO ── -->
+        <div class="section-label">Business Info</div>
+        <div class="grid">
+            <div class="field">
+                <label>Business Name <span>*</span></label>
+                <input id="business_name" type="text" placeholder="RC Generators & Electric" required>
+            </div>
+            <div class="field">
+                <label>Industry <span>*</span></label>
+                <select id="industry">
+                    <option value="home_services">Home Services</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="agency">Digital Agency</option>
+                    <option value="real_estate">Real Estate</option>
+                    <option value="ecommerce">E-Commerce</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="construction">Construction</option>
+                    <option value="law">Law Firm</option>
+                    <option value="accounting">Accounting</option>
+                    <option value="fitness">Fitness & Wellness</option>
+                    <option value="insurance">Insurance</option>
+                    <option value="saas">SaaS</option>
+                    <option value="logistics">Logistics</option>
+                    <option value="manufacturing">Manufacturing</option>
+                    <option value="education">Education</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Contact Name <span>*</span></label>
+                <input id="contact_name" type="text" placeholder="John Smith">
+            </div>
+            <div class="field">
+                <label>Contact Email <span>*</span></label>
+                <input id="contact_email" type="email" placeholder="john@rcgenerators.com">
+            </div>
+            <div class="field">
+                <label>Contact Phone</label>
+                <input id="contact_phone" type="text" placeholder="(555) 867-5309">
+            </div>
+            <div class="field">
+                <label>Team Size</label>
+                <select id="employee_count">
+                    <option value="1-5">1–5</option>
+                    <option value="6-15" selected>6–15</option>
+                    <option value="16-50">16–50</option>
+                    <option value="51-200">51–200</option>
+                    <option value="200+">200+</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Revenue Range</label>
+                <select id="revenue_range">
+                    <option value="under_500k">Under $500K</option>
+                    <option value="500k_1m" selected>$500K–$1M</option>
+                    <option value="1m_5m">$1M–$5M</option>
+                    <option value="5m_10m">$5M–$10M</option>
+                    <option value="10m_plus">$10M+</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Foundation Score <span>0–100 from diagnostic</span></label>
+                <input id="foundation_score" type="number" min="0" max="100" value="52">
+            </div>
+            <div class="field">
+                <label>Complexity Score <span>0–40</span></label>
+                <input id="complexity_score" type="number" min="0" max="40" value="18">
+            </div>
+        </div>
+
+        <!-- ── ADVISOR ── -->
+        <div class="section-label">Advisor Assignment</div>
+        <div class="grid">
+            <div class="field">
+                <label>Advisor Name</label>
+                <input id="advisor_name" type="text" placeholder="Mo">
+            </div>
+            <div class="field">
+                <label>Advisor Email</label>
+                <input id="advisor_email" type="email" placeholder="mo@auraflowusa.com">
+            </div>
+        </div>
+
+        <!-- ── LEAD SOURCES ── -->
+        <div class="section-label">Primary Lead Sources</div>
+        <div class="grid">
+            <div class="field">
+                <label>Primary Source</label>
+                <select id="primary_source">
+                    <option value="google_ads">Google Ads</option>
+                    <option value="lsa">Google LSA</option>
+                    <option value="meta">Meta Ads</option>
+                    <option value="angi">Angi</option>
+                    <option value="yelp">Yelp</option>
+                    <option value="thumbtack">Thumbtack</option>
+                    <option value="organic">Organic / SEO</option>
+                    <option value="referral">Referral</option>
+                    <option value="direct">Direct</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Main Service Type <span>shown on leads</span></label>
+                <input id="service_type" type="text" placeholder="Generator Installation">
+            </div>
+            <div class="field">
+                <label>Avg Lead Value <span>$</span></label>
+                <input id="avg_lead_value" type="number" value="1200">
+            </div>
+            <div class="field">
+                <label>Webhook URL for this client's leads <span>optional</span></label>
+                <input id="lead_webhook" type="text" placeholder="https://aurabazaar.app.n8n.cloud/webhook/wf-leads-01">
+            </div>
+        </div>
+
+        <!-- ── HIERARCHY ── -->
+        <div class="section-label">Business Hierarchy Layers</div>
+        <div class="hierarchy-grid">
+            <div class="layer-item">
+                <label>C1 · Core Operations</label>
+                <input class="layer-node" data-layer="core_c1" data-pos="1" type="text" placeholder="Operations">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active" checked> Active</label>
+            </div>
+            <div class="layer-item">
+                <label>C2 · Management</label>
+                <input class="layer-node" data-layer="core_c2" data-pos="2" type="text" placeholder="Management">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active" checked> Active</label>
+            </div>
+            <div class="layer-item">
+                <label>C3 · Strategy</label>
+                <input class="layer-node" data-layer="core_c3" data-pos="3" type="text" placeholder="Strategy">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active"> Active</label>
+            </div>
+            <div class="layer-item">
+                <label>E1 · Lead Generation</label>
+                <input class="layer-node" data-layer="ext_e1" data-pos="4" type="text" placeholder="Lead Generation">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active" checked> Active</label>
+            </div>
+            <div class="layer-item">
+                <label>E2 · Conversion</label>
+                <input class="layer-node" data-layer="ext_e2" data-pos="5" type="text" placeholder="Conversion">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active" checked> Active</label>
+            </div>
+            <div class="layer-item">
+                <label>E3 · Fulfillment</label>
+                <input class="layer-node" data-layer="ext_e3" data-pos="6" type="text" placeholder="Fulfillment">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active" checked> Active</label>
+            </div>
+            <div class="layer-item">
+                <label>E4 · Retention</label>
+                <input class="layer-node" data-layer="ext_e4" data-pos="7" type="text" placeholder="Retention">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active"> Active</label>
+            </div>
+            <div class="layer-item">
+                <label>E5 · Reporting</label>
+                <input class="layer-node" data-layer="ext_e5" data-pos="8" type="text" placeholder="Reporting">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active"> Active</label>
+            </div>
+            <div class="layer-item">
+                <label>E6 · Finance</label>
+                <input class="layer-node" data-layer="ext_e6" data-pos="9" type="text" placeholder="Finance">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active"> Active</label>
+            </div>
+            <div class="layer-item">
+                <label>E7 · Compliance</label>
+                <input class="layer-node" data-layer="ext_e7" data-pos="10" type="text" placeholder="Compliance">
+                <label class="layer-toggle"><input type="checkbox" class="layer-active"> Active</label>
+            </div>
+        </div>
+
+        <button type="submit" class="generate-btn" id="submit-btn">Create Client in AuraFlow →</button>
+    </form>
+
+    <!-- ── OUTPUT ── -->
+    <div class="output-section" id="output">
+
+        <div class="section-label" style="margin-top:2rem">Client Created ✓</div>
+        <div class="sql-block">
+            <div class="sql-head">
+                <span>Client Details</span>
+                <button class="cbtn" onclick="cc(this,'client-out')">Copy ID</button>
+            </div>
+            <pre id="client-out"></pre>
+        </div>
+
+        <div class="section-label">n8n Workflow Updates</div>
+        <div class="n8n-block" id="n8n-out"></div>
+
+        <div class="section-label">Next Steps Checklist</div>
+        <div class="sql-block" style="padding:1rem">
+            <ul class="checklist" id="checklist-out"></ul>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────
+const APP_URL = 'https://app.auraflowusa.com'
+const ADMIN_SECRET = prompt('Enter Admin Secret (ADMIN_SECRET env var):') || ''
+// ─────────────────────────────────────────────────────
+
+document.getElementById('form').addEventListener('submit', async function(e) {
+    e.preventDefault()
+    await submit()
+})
+
+async function submit() {
+    const btn = document.getElementById('submit-btn')
+    btn.disabled = true
+    btn.textContent = 'Creating…'
+
+    // ── Collect form values ────────────────────────────
+    const bizName       = document.getElementById('biz-name').value.trim()
+    const contactName   = document.getElementById('contact-name').value.trim()
+    const contactEmail  = document.getElementById('contact-email').value.trim()
+    const contactPhone  = document.getElementById('contact-phone').value.trim()
+    const industry      = document.getElementById('industry').value
+    const employeeCount = document.getElementById('employee-count').value
+    const revenueRange  = document.getElementById('revenue-range').value
+    const advisorName   = document.getElementById('advisor-name').value.trim()
+    const advisorEmail  = document.getElementById('advisor-email').value.trim()
+    const primarySource = document.getElementById('primary-source').value
+    const serviceType   = document.getElementById('service-type').value.trim()
+    const avgLeadValue  = parseFloat(document.getElementById('avg-lead-value').value) || 0
+    const foundationScore = parseInt(document.getElementById('foundation-score').value, 10) || 60
+    const complexityScore = parseInt(document.getElementById('complexity-score').value, 10) || 50
+
+    // ── Build hierarchy layers ─────────────────────────
+    const hierarchy_layers = []
+    document.querySelectorAll('.layer-item').forEach(item => {
+        const input  = item.querySelector('.layer-node')
+        const active = item.querySelector('.layer-active')
+        if (!input) return
+        const name = input.value.trim()
+        if (!name) return
+        hierarchy_layers.push({
+            layer_type:     input.dataset.layer,
+            node_name:      name,
+            layer_position: parseInt(input.dataset.pos, 10),
+            is_active:      active ? active.checked : false,
+        })
+    })
+
+    // ── POST to API ────────────────────────────────────
+    let result
+    try {
+        const res = await fetch(`${APP_URL}/api/admin/onboard`, {
+            method:  'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${ADMIN_SECRET}`,
+            },
+            body: JSON.stringify({
+                business_name:  bizName,
+                contact_name:   contactName,
+                contact_email:  contactEmail,
+                contact_phone:  contactPhone || undefined,
+                industry,
+                employee_count: employeeCount,
+                revenue_range:  revenueRange,
+                foundation_score: foundationScore,
+                complexity_score: complexityScore,
+                advisor_name:   advisorName || undefined,
+                advisor_email:  advisorEmail || undefined,
+                primary_source: primarySource,
+                service_type:   serviceType || undefined,
+                avg_lead_value: avgLeadValue || undefined,
+                hierarchy_layers,
+            }),
+        })
+        result = await res.json()
+        if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`)
+    } catch (err) {
+        btn.disabled = false
+        btn.textContent = 'Create Client in AuraFlow →'
+        alert(`Error: ${err.message}`)
+        return
+    }
+
+    btn.disabled = false
+    btn.textContent = 'Create Client in AuraFlow →'
+
+    const clientId = result.client_id
+
+    // ── Client details block ───────────────────────────
+    document.getElementById('client-out').textContent =
+        `client_id:     ${clientId}\nbusiness_name: ${result.business_name}\ncontact_email: ${contactEmail}`
+
+    // ── n8n block ──────────────────────────────────────
+    const n8nHtml = `
+        <h3>Update these values in each n8n workflow</h3>
+        <div class="kv"><span class="k">client_id (all workflows)</span><span class="v">${clientId}</span></div>
+        <div class="kv"><span class="k">business name</span><span class="v">${bizName}</span></div>
+        <div class="kv"><span class="k">primary lead source</span><span class="v">${primarySource}</span></div>
+        <div class="kv"><span class="k">service type</span><span class="v">${serviceType || '—'}</span></div>
+        <div class="kv"><span class="k">avg estimated_value</span><span class="v">$${avgLeadValue}</span></div>
+        <br>
+        <h3 style="margin-bottom:.6rem">WF-METRICS-01 — Build Metrics Code node</h3>
+        <div class="kv"><span class="k">CLIENT_ID =</span><span class="v">'${clientId}'</span></div>
+        <br>
+        <h3 style="margin-bottom:.6rem">WF-LEADS-01 — HTTP Body client_id field</h3>
+        <div class="kv"><span class="k">"client_id":</span><span class="v">"${clientId}"</span></div>
+        <br>
+        <h3 style="margin-bottom:.6rem">Duplicate these 5 workflows and update client_id:</h3>
+        <div class="kv"><span class="k">WF-LEADS-01</span><span class="v">M426MhAVRlz7wxNB</span></div>
+        <div class="kv"><span class="k">WF-METRICS-01</span><span class="v">s2OAMJzhGsZrh4R8</span></div>
+        <div class="kv"><span class="k">WF-AGENTS-01</span><span class="v">mo2zSAhw59sfxzzh</span></div>
+        <div class="kv"><span class="k">WF-NOTIFY-01</span><span class="v">NwhqiE1SDE2KJllC</span></div>
+        <div class="kv"><span class="k">WF-CONTENT-01</span><span class="v">tQMH5ac04P4kZMCt</span></div>
+    `
+    document.getElementById('n8n-out').innerHTML = n8nHtml
+
+    // ── Checklist ──────────────────────────────────────
+    const steps = [
+        [`Send magic link invite to ${contactEmail}`, '1 min'],
+        ['After they sign up, copy their auth UUID from Supabase → Auth → Users', '1 min'],
+        [`Run: UPDATE client_profiles SET user_id = '&lt;uuid&gt;' WHERE client_id = '${clientId}'`, '30 sec'],
+        ['Duplicate WF-LEADS-01 in n8n → update client_id → activate', '5 min'],
+        ['Duplicate WF-METRICS-01 → update CLIENT_ID in Code node → activate', '5 min'],
+        ['Connect their lead source (Angi / Google LSA / etc) to the new WF-LEADS-01 webhook', '10 min'],
+        [`Test: send a test lead via curl to /api/webhooks/lead with client_id: ${clientId}`, '2 min'],
+        ['Confirm lead appears in app at app.auraflowusa.com', '1 min'],
+    ]
+    const checklistHtml = steps.map(([step, time]) =>
+        `<li><strong>${step}</strong> <span style="color:var(--t4);font-size:.75rem;margin-left:.3rem">${time}</span></li>`
+    ).join('')
+    document.getElementById('checklist-out').innerHTML = checklistHtml
+
+    // Show output
+    document.getElementById('output').classList.add('visible')
+    document.getElementById('output').scrollIntoView({ behavior: 'smooth' })
+}
+
+function cc(btn, id) {
+    const text = document.getElementById(id).textContent
+    navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✓ Copied'
+        btn.classList.add('ok')
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok') }, 2000)
+    })
+}
+</script>
+</body>
+</html>
