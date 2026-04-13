@@ -1,0 +1,186 @@
+{
+  "_note": "Claude: READ THIS before writing any Supabase queries. These are the exact column names — do not guess.",
+  "_project": "AuraFlow Client App — bfzdcyuyilesubtgbhdc.supabase.co",
+  "_rls": "All tables use RLS. Queries filter by client_id via client_profiles.user_id = auth.uid(). Service-role key bypasses RLS — only use in /api/admin/* and /api/webhooks/*.",
+
+  "tables": {
+    "clients": {
+      "id": "uuid PK",
+      "name": "text",
+      "created_at": "timestamptz"
+    },
+
+    "client_profiles": {
+      "id": "uuid PK",
+      "user_id": "uuid FK → auth.users (null until magic link accepted)",
+      "client_id": "uuid FK → clients.id",
+      "business_name": "text NOT NULL",
+      "contact_name": "text NOT NULL",
+      "contact_email": "text NOT NULL",
+      "contact_phone": "text nullable",
+      "industry": "text",
+      "employee_count": "text",
+      "revenue_range": "text",
+      "complexity_score": "int",
+      "foundation_score": "int",
+      "hierarchy_depth": "int default 3",
+      "advisor_name": "text nullable",
+      "advisor_email": "text nullable",
+      "onboarded_at": "timestamptz"
+    },
+
+    "lead_interactions": {
+      "id": "uuid PK",
+      "client_id": "uuid FK → clients.id",
+      "lead_name": "text",
+      "lead_email": "text",
+      "lead_phone": "text",
+      "lead_location": "text",
+      "source": "text",
+      "service_type": "text",
+      "estimated_value": "decimal(10,2)",
+      "lead_score": "int",
+      "status": "text default 'new' — values: new | qualified | booked | won | lost",
+      "follow_up_stage": "int default 0",
+      "follow_up_history": "jsonb default '[]'",
+      "notes": "text",
+      "assigned_to": "text",
+      "created_at": "timestamptz",
+      "updated_at": "timestamptz",
+      "qualified_at": "timestamptz nullable",
+      "booked_at": "timestamptz nullable",
+      "won_at": "timestamptz nullable",
+      "lost_at": "timestamptz nullable",
+      "lost_reason": "text nullable"
+    },
+
+    "daily_metrics": {
+      "id": "uuid PK",
+      "client_id": "uuid FK → clients.id",
+      "date": "date NOT NULL",
+      "leads_captured": "int default 0",
+      "leads_qualified": "int default 0",
+      "leads_booked": "int default 0",
+      "leads_won": "int default 0",
+      "leads_lost": "int default 0",
+      "avg_response_time_sec": "int nullable",
+      "cost_per_lead": "decimal(10,2) nullable",
+      "ad_spend": "decimal(10,2) default 0",
+      "ad_revenue": "decimal(10,2) default 0",
+      "ad_roas": "decimal(5,2) nullable",
+      "ad_clicks": "int default 0",
+      "ad_impressions": "int default 0",
+      "reviews_received": "int default 0",
+      "reviews_responded": "int default 0",
+      "avg_review_score": "decimal(3,2) nullable",
+      "total_reviews": "int default 0",
+      "organic_traffic": "int default 0",
+      "keywords_ranking": "int default 0",
+      "top_keyword": "text nullable",
+      "top_keyword_position": "int nullable",
+      "admin_hours_saved": "decimal(5,2) default 0",
+      "workflows_executed": "int default 0",
+      "foundation_score": "int nullable",
+      "pipeline_value": "decimal(12,2) default 0",
+      "_unique": "client_id + date"
+    },
+
+    "agent_activity": {
+      "id": "uuid PK",
+      "client_id": "uuid FK → clients.id",
+      "agent_name": "text NOT NULL — values: cyrus | aria | rex | nova | echo | pulse | ContentEngine",
+      "action": "text NOT NULL",
+      "details": "text nullable",
+      "category": "text — values: lead | workflow | content | system | review | seo",
+      "status": "text default 'completed' — values: completed | in_progress | failed | pending",
+      "requires_approval": "boolean default false",
+      "approved_by": "text nullable",
+      "approved_at": "timestamptz nullable",
+      "metadata": "jsonb default '{}'",
+      "created_at": "timestamptz"
+    },
+
+    "chat_messages": {
+      "id": "uuid PK",
+      "client_id": "uuid FK → clients.id",
+      "role": "text NOT NULL — values: user | assistant",
+      "content": "text NOT NULL",
+      "metadata": "jsonb default '{}'",
+      "created_at": "timestamptz"
+    },
+
+    "notifications": {
+      "id": "uuid PK",
+      "client_id": "uuid FK → clients.id",
+      "type": "text NOT NULL — values: advisor_message | system_alert | lead_alert | review_alert | content_ready",
+      "severity": "text default 'medium' — values: low | medium | high | urgent",
+      "title": "text NOT NULL",
+      "body": "text nullable",
+      "read": "boolean default false",
+      "action_url": "text nullable",
+      "metadata": "jsonb default '{}'",
+      "created_at": "timestamptz"
+    },
+
+    "hierarchy_nodes": {
+      "id": "uuid PK",
+      "client_id": "uuid FK → clients.id",
+      "parent_id": "uuid FK → hierarchy_nodes.id nullable",
+      "layer_type": "text NOT NULL — values: core_c1..c3 | ext_e1..e7",
+      "layer_position": "int NOT NULL",
+      "node_name": "text NOT NULL",
+      "is_active": "boolean default true",
+      "metadata": "jsonb default '{}'",
+      "created_at": "timestamptz"
+    },
+
+    "directives": {
+      "id": "uuid PK",
+      "client_id": "uuid FK → clients.id",
+      "type": "text NOT NULL — values: lead | ad | content | review | seo | financial",
+      "severity": "text NOT NULL — values: urgent | important | informational",
+      "headline": "text NOT NULL",
+      "body": "text nullable",
+      "action_label": "text nullable",
+      "action_type": "text nullable — values: draft_lead_email | optimize_campaign | generate_content | respond_review | boost_seo | view_details",
+      "action_payload": "jsonb default '{}'",
+      "source_data": "jsonb default '{}'",
+      "dismissed": "boolean default false",
+      "acted_on": "boolean default false",
+      "created_at": "timestamptz"
+    },
+
+    "lead_analyses": {
+      "id": "uuid PK",
+      "client_id": "uuid FK → clients.id",
+      "lead_id": "uuid FK → lead_interactions.id",
+      "intent_score": "int — 0-100",
+      "intent_signals": "jsonb default '[]'",
+      "suggested_reply": "text nullable",
+      "urgency": "text — values: urgent | follow-up | standard",
+      "analysis_summary": "text nullable",
+      "created_at": "timestamptz"
+    },
+
+    "chat_context": {
+      "id": "uuid PK",
+      "client_id": "uuid FK → clients.id",
+      "key": "text NOT NULL — e.g. 'communication_preference', 'budget_concern'",
+      "value": "text NOT NULL",
+      "source": "text default 'inferred' — values: inferred | explicit",
+      "confidence": "float default 0.8 — 0.0 to 1.0",
+      "created_at": "timestamptz",
+      "updated_at": "timestamptz",
+      "_unique": "client_id + key"
+    },
+
+    "push_subscriptions": {
+      "id": "uuid PK",
+      "client_id": "text NOT NULL",
+      "user_id": "uuid NOT NULL",
+      "endpoint": "text NOT NULL unique",
+      "keys": "jsonb NOT NULL — {p256dh, auth}",
+      "created_at": "timestamptz"
+    }
+  }
+}

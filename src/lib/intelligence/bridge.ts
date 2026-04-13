@@ -284,14 +284,57 @@ export async function getClientContext(
 ): Promise<string> {
   const { data: context } = await supabase
     .from('chat_context')
-    .select('key, value')
+    .select('key, value, confidence, updated_at')
     .eq('client_id', clientId)
-    .order('updated_at', { ascending: false })
-    .limit(20)
+    .gte('confidence', 0.5)
+    .order('confidence', { ascending: false })
+    .limit(40)
 
   if (!context?.length) return ''
 
-  return context
-    .map(c => `- ${c.key}: ${c.value}`)
-    .join('\n')
+  // Group by recency: recent (last 7 days) vs established
+  const now = Date.now()
+  const sevenDays = 7 * 24 * 60 * 60 * 1000
+  const recent = context.filter(c => now - new Date(c.updated_at).getTime() < sevenDays)
+  const established = context.filter(c => now - new Date(c.updated_at).getTime() >= sevenDays)
+
+  const lines: string[] = []
+  if (recent.length) {
+    lines.push('Recently learned:')
+    recent.forEach(c => lines.push(`  · ${c.key}: ${c.value}`))
+  }
+  if (established.length) {
+    lines.push('Known preferences:')
+    established.forEach(c => lines.push(`  · ${c.key}: ${c.value}`))
+  }
+
+  return lines.join('\n')
+}
+
+// ═══════════════════════════════════════
+// RECENT CONVERSATION SUMMARY
+// Used to seed chat context across sessions
+// ═══════════════════════════════════════
+
+export async function getConversationSummary(
+  supabase: SupabaseClient,
+  clientId: string
+): Promise<string> {
+  // Get last 5 assistant messages as a memory of recent topics
+  const { data: recent } = await supabase
+    .from('chat_messages')
+    .select('role, content, created_at')
+    .eq('client_id', clientId)
+    .eq('role', 'assistant')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  if (!recent?.length) return ''
+
+  const summaries = recent
+    .reverse()
+    .map(m => m.content.slice(0, 150).replace(/\n/g, ' '))
+    .join(' | ')
+
+  return `Recent conversation topics: ${summaries}`
 }

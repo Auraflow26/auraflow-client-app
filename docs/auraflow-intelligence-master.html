@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraFlow Intelligence Architecture — Master Document</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030305; --bg2: #0c0a12; --bg3: #0f0d15; --bg4: #141220;
+            --accent: #8b5cf6; --accent-l: #a78bfa; --accent-b: #c4b5fd;
+            --glow: rgba(139,92,246,0.12); --glow2: rgba(139,92,246,0.25);
+            --t1: #faf5ff; --t2: #c4b5fd; --t3: #7c7291; --t4: #4a4458;
+            --b: rgba(139,92,246,0.1); --b2: rgba(139,92,246,0.3);
+            --ok: #10b981; --warn: #f59e0b; --err: #ef4444; --gold: #d4af37;
+            --fm: 'JetBrains Mono', monospace;
+            --f: 'Space Grotesk', sans-serif;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:var(--f); background:var(--bg); color:var(--t1); line-height:1.7; -webkit-font-smoothing:antialiased; }
+        .page { max-width:900px; margin:0 auto; padding:3rem 2rem 6rem; }
+
+        /* ── COVER ── */
+        .cover { text-align:center; padding:4rem 0 5rem; border-bottom:1px solid var(--b); margin-bottom:4rem; }
+        .cover-badge { display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .8rem; background:var(--glow); border:1px solid var(--b2); border-radius:100px; font-size:.7rem; font-weight:600; color:var(--accent-b); text-transform:uppercase; letter-spacing:.1em; margin-bottom:1.5rem; }
+        .cover h1 { font-size:2.6rem; font-weight:700; letter-spacing:-2px; background:linear-gradient(135deg,#8b5cf6,#c4b5fd,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1.2; margin-bottom:.75rem; }
+        .cover-sub { font-size:1.1rem; color:var(--t2); margin-bottom:2rem; max-width:560px; margin-left:auto; margin-right:auto; }
+        .cover-meta { display:flex; align-items:center; justify-content:center; gap:2rem; font-family:var(--fm); font-size:.72rem; color:var(--t4); }
+        .cover-meta span { display:flex; align-items:center; gap:.4rem; }
+
+        /* ── TOC ── */
+        .toc { background:var(--bg2); border:1px solid var(--b); border-radius:14px; padding:1.5rem 2rem; margin-bottom:3rem; }
+        .toc-title { font-family:var(--fm); font-size:.65rem; text-transform:uppercase; letter-spacing:.14em; color:var(--gold); margin-bottom:1rem; }
+        .toc-list { list-style:none; }
+        .toc-list li { display:flex; align-items:baseline; gap:.75rem; padding:.3rem 0; border-bottom:1px solid var(--b); }
+        .toc-list li:last-child { border:none; }
+        .toc-num { font-family:var(--fm); font-size:.7rem; color:var(--t4); min-width:28px; }
+        .toc-list a { color:var(--t2); text-decoration:none; font-size:.9rem; transition:.15s; }
+        .toc-list a:hover { color:var(--accent-b); }
+        .toc-list .sub { color:var(--t4); font-size:.8rem; margin-left:1rem; }
+
+        /* ── SECTION ── */
+        .section { margin-bottom:4rem; }
+        .section-label { font-family:var(--fm); font-size:.65rem; text-transform:uppercase; letter-spacing:.14em; color:var(--gold); margin-bottom:.5rem; }
+        .section h2 { font-size:1.6rem; font-weight:700; color:var(--t1); letter-spacing:-.5px; margin-bottom:1rem; padding-bottom:.75rem; border-bottom:1px solid var(--b); }
+        .section h3 { font-size:1.05rem; font-weight:600; color:var(--accent-b); margin:1.5rem 0 .6rem; }
+        .section p { color:var(--t2); font-size:.95rem; margin-bottom:1rem; }
+        .section ul, .section ol { color:var(--t2); font-size:.92rem; padding-left:1.4rem; margin-bottom:1rem; }
+        .section li { margin-bottom:.35rem; }
+        .section strong { color:var(--t1); }
+
+        /* ── CALLOUT ── */
+        .callout { display:flex; gap:1rem; padding:1rem 1.25rem; background:rgba(139,92,246,.07); border:1px solid var(--b2); border-radius:12px; margin:1.25rem 0; }
+        .callout-icon { font-size:1.1rem; flex-shrink:0; margin-top:.1rem; }
+        .callout p { color:var(--t1); font-size:.9rem; margin:0; }
+        .callout.gold { background:rgba(212,175,55,.06); border-color:rgba(212,175,55,.25); }
+        .callout.gold p { color:var(--gold); }
+        .callout.ok { background:rgba(16,185,129,.06); border-color:rgba(16,185,129,.25); }
+        .callout.ok p { color:#6ee7b7; }
+
+        /* ── PHASE CARDS ── */
+        .phase-grid { display:grid; gap:1rem; margin:1rem 0; }
+        .phase-card { background:var(--bg2); border:1px solid var(--b); border-radius:14px; padding:1.25rem 1.5rem; position:relative; overflow:hidden; }
+        .phase-card.active { border-color:var(--b2); }
+        .phase-card.active::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,#8b5cf6,#c4b5fd); }
+        .phase-num { font-family:var(--fm); font-size:.65rem; text-transform:uppercase; letter-spacing:.1em; color:var(--t4); margin-bottom:.4rem; }
+        .phase-title { font-size:1rem; font-weight:600; color:var(--t1); margin-bottom:.5rem; }
+        .phase-desc { font-size:.85rem; color:var(--t3); margin-bottom:.75rem; }
+        .phase-items { list-style:none; padding:0; }
+        .phase-items li { font-size:.82rem; color:var(--t2); padding:.2rem 0; display:flex; gap:.5rem; }
+        .phase-items li::before { content:'·'; color:var(--accent); flex-shrink:0; }
+        .phase-status { display:inline-flex; align-items:center; gap:.4rem; padding:.2rem .6rem; border-radius:100px; font-family:var(--fm); font-size:.62rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; margin-top:.75rem; }
+        .phase-status.current { background:rgba(139,92,246,.15); color:var(--accent-b); border:1px solid var(--b2); }
+        .phase-status.next { background:rgba(212,175,55,.08); color:var(--gold); border:1px solid rgba(212,175,55,.2); }
+        .phase-status.future { background:rgba(74,68,88,.2); color:var(--t4); border:1px solid var(--b); }
+
+        /* ── DIAGRAM ── */
+        .diagram { background:var(--bg2); border:1px solid var(--b); border-radius:12px; padding:1.5rem; margin:1rem 0; font-family:var(--fm); font-size:.75rem; color:var(--t2); line-height:1.9; overflow-x:auto; white-space:pre; }
+
+        /* ── TABLE ── */
+        .doc-table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:.85rem; }
+        .doc-table th { font-family:var(--fm); font-size:.62rem; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); text-align:left; padding:.6rem .75rem; border-bottom:1px solid rgba(212,175,55,.2); }
+        .doc-table td { padding:.6rem .75rem; border-bottom:1px solid var(--b); color:var(--t2); vertical-align:top; }
+        .doc-table tr:last-child td { border:none; }
+        .doc-table tr:hover td { background:rgba(139,92,246,.04); }
+        .doc-table .hl { color:var(--t1); font-weight:500; }
+
+        /* ── MILESTONE ── */
+        .timeline { margin:1rem 0; }
+        .milestone { display:flex; gap:1.25rem; padding:.75rem 0; border-bottom:1px solid var(--b); align-items:flex-start; }
+        .milestone:last-child { border:none; }
+        .milestone-date { font-family:var(--fm); font-size:.72rem; color:var(--gold); min-width:90px; padding-top:.1rem; }
+        .milestone-content strong { color:var(--t1); font-size:.9rem; display:block; margin-bottom:.2rem; }
+        .milestone-content span { color:var(--t3); font-size:.82rem; }
+        .milestone-dot { width:8px; height:8px; border-radius:50%; margin-top:.35rem; flex-shrink:0; }
+        .milestone-dot.done { background:var(--ok); }
+        .milestone-dot.active { background:var(--accent); box-shadow:0 0 8px rgba(139,92,246,.5); }
+        .milestone-dot.future { background:var(--t4); }
+
+        /* ── MOAT ── */
+        .moat-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:.75rem 0; }
+        @media(max-width:600px){ .moat-row { grid-template-columns:1fr; } }
+        .moat-card { background:var(--bg2); border:1px solid var(--b); border-radius:12px; padding:1rem; }
+        .moat-card-title { font-family:var(--fm); font-size:.62rem; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); margin-bottom:.5rem; }
+        .moat-card p { font-size:.82rem; color:var(--t3); }
+
+        /* ── STACK ── */
+        .stack-row { display:flex; align-items:flex-start; gap:.75rem; padding:.6rem 0; border-bottom:1px solid var(--b); }
+        .stack-row:last-child { border:none; }
+        .stack-label { font-family:var(--fm); font-size:.7rem; color:var(--t3); min-width:120px; }
+        .stack-val { font-size:.85rem; color:var(--t2); flex:1; }
+        .stack-val strong { color:var(--t1); }
+
+        /* ── PRINT ── */
+        @media print {
+            body { background:#fff; color:#111; font-family:Georgia, serif; }
+            .cover h1 { -webkit-text-fill-color:#111; background:none; color:#111; }
+            .cover-badge, .toc { border:1px solid #ddd; background:#f9f9f9; }
+            .section h2 { color:#111; border-color:#ddd; }
+            .section h3 { color:#333; }
+            .section p, .section li { color:#333; }
+            .callout { border:1px solid #ddd; background:#f9f9f9; }
+            .callout p { color:#333; }
+            .phase-card, .moat-card { border:1px solid #ddd; background:#f9f9f9; }
+            .phase-title, .milestone-content strong { color:#111; }
+            .phase-desc, .phase-items li, .stack-val { color:#444; }
+            .doc-table th { color:#555; }
+            .doc-table td { color:#333; }
+            .diagram { background:#f4f4f4; border:1px solid #ddd; color:#333; }
+            .toc-list a { color:#333; }
+            .milestone-content span { color:#555; }
+            .page { padding:1rem; }
+            @page { margin:2cm; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- ── COVER ── -->
+    <div class="cover">
+        <div class="cover-badge">Confidential — Internal Strategy</div>
+        <h1>AuraFlow Intelligence<br>Architecture</h1>
+        <p class="cover-sub">The 5-Phase Plan to Build an Unbeatable AI Operating System for Small Business</p>
+        <div class="cover-meta">
+            <span>Version 1.0</span>
+            <span>April 2026</span>
+            <span>AuraFlow USA</span>
+        </div>
+    </div>
+
+    <!-- ── TOC ── -->
+    <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list">
+            <li><span class="toc-num">1</span><a href="#s1">Executive Summary</a></li>
+            <li><span class="toc-num">2</span><a href="#s2">The Problem We're Solving</a></li>
+            <li><span class="toc-num">3</span><a href="#s3">Architecture Overview</a></li>
+            <li><span class="toc-num">4</span><a href="#s4">The 5 Phases</a>
+                <span class="sub">Phase 1: Client Agents · Phase 2: Telemetry · Phase 3: Master Brain · Phase 4: Skills · Phase 5: Benchmarks</span>
+            </li>
+            <li><span class="toc-num">5</span><a href="#s5">The Competitive Moat</a></li>
+            <li><span class="toc-num">6</span><a href="#s6">Current Tech Stack</a></li>
+            <li><span class="toc-num">7</span><a href="#s7">Timeline &amp; Milestones</a></li>
+            <li><span class="toc-num">8</span><a href="#s8">What We Need to Execute</a></li>
+        </ul>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- 1 — EXECUTIVE SUMMARY             -->
+    <!-- ══════════════════════════════════ -->
+    <div class="section" id="s1">
+        <div class="section-label">Section 01</div>
+        <h2>Executive Summary</h2>
+
+        <p>AuraFlow is building a compounding AI operating system for small businesses. Every client gets a dedicated AI agent that learns their specific business — their leads, their patterns, their team, their language. Over time, that agent becomes the institutional memory of the business.</p>
+
+        <p>The critical insight is that <strong>data compounds</strong>. A generic AI assistant forgets every conversation. AuraFlow agents remember everything and get smarter with every interaction — not just for that client, but by contributing to an anonymized intelligence pool that makes every other client's agent smarter too.</p>
+
+        <div class="callout gold">
+            <span class="callout-icon">◆</span>
+            <p><strong>The 3-sentence pitch:</strong> AuraFlow gives every small business owner an AI advisor that knows their business as well as they do. It learns from every conversation, every lead, and every outcome — and improves automatically. The longer a client stays, the smarter their agent gets, and the harder it becomes for any competitor to replicate what we've built.</p>
+        </div>
+
+        <p>This document outlines the 5-phase technical roadmap to build this system — from individual client agents (Phase 1, in progress) to an industry benchmark engine that no competitor can replicate without years of real client data (Phase 5).</p>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- 2 — THE PROBLEM                   -->
+    <!-- ══════════════════════════════════ -->
+    <div class="section" id="s2">
+        <div class="section-label">Section 02</div>
+        <h2>The Problem We're Solving</h2>
+
+        <h3>Business owners have data but can't act on it</h3>
+        <p>A home service business owner has leads in Angi, ad campaigns in Google, reviews on Google Business, and a CRM with 200 contacts. None of these tools talk to each other, and none of them tell the owner what to do next. They're drowning in data and starving for decisions.</p>
+
+        <h3>Current AI tools start fresh every conversation</h3>
+        <p>ChatGPT, Claude, Gemini — every conversation begins with zero context. The business owner has to re-explain their situation every time. There's no learning, no accumulation, no compounding value. It's a calculator, not an advisor.</p>
+
+        <h3>Generic advice vs client-specific intelligence</h3>
+        <p>Generic AI tools give generic answers. "Respond to leads faster" is advice that applies to every business. What RC Generators &amp; Electric actually needs to know is: "Your Angi lead response time jumped from 4 minutes to 22 minutes on Tuesday — that's why your leads dropped 60% this week. Specifically."</p>
+
+        <h3>The forgetting problem is a trust problem</h3>
+        <p>When an AI forgets what a client told it last week, the client stops trusting it. They stop using it. The value never compounds. AuraFlow's architecture solves this at the infrastructure level — memory is not an afterthought, it's the foundation.</p>
+
+        <div class="callout">
+            <span class="callout-icon">→</span>
+            <p>The market doesn't need another AI chatbot. It needs an AI that <strong>knows your business</strong>, remembers your history, and gets smarter the longer you use it.</p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- 3 — ARCHITECTURE OVERVIEW         -->
+    <!-- ══════════════════════════════════ -->
+    <div class="section" id="s3">
+        <div class="section-label">Section 03</div>
+        <h2>Architecture Overview</h2>
+
+        <h3>The Full System</h3>
+        <div class="diagram">
+┌─────────────────────────────────────────────────────────────┐
+│                    AURAFLOW MASTER BRAIN                     │
+│              (Phase 3 — Hermes on Railway)                   │
+│   Aggregate patterns · Industry benchmarks · Skill library  │
+└──────────────────┬──────────────────────────────────────────┘
+    learns from ↑  │ ↓ pushes skills to
+┌──────────────────┼──────────────────────────────────────────┐
+│         CLIENT AGENT LAYER  (Phase 1 — Railway)             │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
+│  │ Client A   │  │ Client B   │  │ Client C   │            │
+│  │ Hermes     │  │ Hermes     │  │ Hermes     │            │
+│  │ Agent      │  │ Agent      │  │ Agent      │            │
+│  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘           │
+└────────┼───────────────┼───────────────┼────────────────────┘
+         ↕               ↕               ↕
+┌─────────────────────────────────────────────────────────────┐
+│                    SUPABASE DATABASE                         │
+│  client_profiles · leads · metrics · agent_activity         │
+│  chat_context · directives · notifications · hierarchy      │
+└─────────────────────────────────────────────────────────────┘
+         ↕               ↕               ↕
+┌─────────────────────────────────────────────────────────────┐
+│                    N8N AUTOMATION                            │
+│   WF-LEADS-01 · WF-METRICS-01 · WF-AGENTS-01               │
+│   WF-NOTIFY-01 · WF-CONTENT-01 (per client)                │
+└─────────────────────────────────────────────────────────────┘
+         ↕
+┌─────────────────────────────────────────────────────────────┐
+│                 AURAFLOW CLIENT APP                          │
+│         Next.js 14 PWA · app.auraflowusa.com                │
+│   Pulse · Leads · Reports · Chat · Agents · Content         │
+└─────────────────────────────────────────────────────────────┘</div>
+
+        <h3>Three Memory Layers</h3>
+        <p>AuraFlow agents operate across three distinct memory layers that compound over time:</p>
+
+        <table class="doc-table">
+            <thead>
+                <tr><th>Layer</th><th>What it stores</th><th>Where it lives</th><th>Lifespan</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="hl">Layer 1 — Preferences</td>
+                    <td>Extracted client preferences: communication style, priorities, concerns</td>
+                    <td>Supabase <code>chat_context</code></td>
+                    <td>Permanent</td>
+                </tr>
+                <tr>
+                    <td class="hl">Layer 2 — Conversation History</td>
+                    <td>Full session transcripts, cross-session recall via search</td>
+                    <td>Hermes SQLite (Railway)</td>
+                    <td>Permanent</td>
+                </tr>
+                <tr>
+                    <td class="hl">Layer 3 — Skills</td>
+                    <td>Business-specific playbooks written by the agent itself</td>
+                    <td>Hermes Skills directory</td>
+                    <td>Versioned, improves over time</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>How a Conversation Flows</h3>
+        <div class="diagram">
+Client types message in the app
+          ↓
+/api/chat/route.ts
+          ↓
+1. Auth check (Supabase)
+2. Fetch 30-day metrics, leads, activity
+3. Fetch Layer 1 memory (chat_context preferences)
+          ↓
+POST to Hermes on Railway
+Header: X-Hermes-Session-Id = client_id
+          ↓
+Hermes resumes that client's session
+Loads Layer 2 (conversation history)
+Loads Layer 3 (client-specific skills)
+          ↓
+Agent loop — up to 90 reasoning turns
+Uses tools if needed (search, code, APIs)
+          ↓
+Streams response back through the app
+          ↓
+Saves to Supabase · Extracts new preferences
+          ↓
+Client sees response in real time</div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- 4 — THE 5 PHASES                  -->
+    <!-- ══════════════════════════════════ -->
+    <div class="section" id="s4">
+        <div class="section-label">Section 04</div>
+        <h2>The 5 Phases</h2>
+
+        <div class="phase-grid">
+
+            <!-- PHASE 1 -->
+            <div class="phase-card active">
+                <div class="phase-num">Phase 01</div>
+                <div class="phase-title">Individual Client Agents</div>
+                <div class="phase-desc">Each client gets their own dedicated Hermes AI agent running on Railway, connected to their Supabase data and learning from every conversation.</div>
+                <ul class="phase-items">
+                    <li>Dedicated Hermes Docker instance per client on Railway (~$15-20/mo)</li>
+                    <li>Persistent memory keyed by <code>client_id</code> session — never forgets</li>
+                    <li>Connected to client's real business data: leads, metrics, activity</li>
+                    <li>Autonomous reasoning loops up to 90 turns per response</li>
+                    <li>Self-writes skills from repeated patterns over time</li>
+                    <li>Multi-channel: WhatsApp, Telegram, or app — same agent</li>
+                </ul>
+                <span class="phase-status current">● In Progress — April 2026</span>
+            </div>
+
+            <!-- PHASE 2 -->
+            <div class="phase-card">
+                <div class="phase-num">Phase 02</div>
+                <div class="phase-title">Anonymous Telemetry Pipeline</div>
+                <div class="phase-desc">Client agents report anonymized performance patterns upward to a central AuraFlow database — building the intelligence foundation without exposing any client's private data.</div>
+                <ul class="phase-items">
+                    <li>Nightly n8n job strips PII and aggregates patterns per industry</li>
+                    <li>New <code>aggregate_insights</code> table in master Supabase project</li>
+                    <li>What flows up: close rates, response time correlations, lead source performance, seasonal patterns</li>
+                    <li>What stays private: names, contacts, financials, communications</li>
+                    <li>Privacy boundary enforced at the data pipeline level, not policy</li>
+                </ul>
+                <span class="phase-status next">◎ Next — May 2026</span>
+            </div>
+
+            <!-- PHASE 3 -->
+            <div class="phase-card">
+                <div class="phase-num">Phase 03</div>
+                <div class="phase-title">AuraFlow Master Brain</div>
+                <div class="phase-desc">A dedicated internal Hermes instance trained on all aggregate patterns — the intelligence engine that no individual client agent can become alone.</div>
+                <ul class="phase-items">
+                    <li>Not client-facing — internal AuraFlow intelligence only</li>
+                    <li>Generates real industry benchmarks from actual multi-client data</li>
+                    <li>Powers Foundation Score with live weights instead of static assumptions</li>
+                    <li>Identifies what separates top-performing clients from struggling ones</li>
+                    <li>Requires minimum 10 active clients for statistically meaningful patterns</li>
+                </ul>
+                <span class="phase-status future">◌ Planned — June 2026</span>
+            </div>
+
+            <!-- PHASE 4 -->
+            <div class="phase-card">
+                <div class="phase-num">Phase 04</div>
+                <div class="phase-title">Skill Distribution System</div>
+                <div class="phase-desc">The Master Brain writes new skills based on what works across all clients and distributes them down to every client agent automatically — the entire network gets smarter at once.</div>
+                <ul class="phase-items">
+                    <li>Master Brain identifies high-value playbooks from aggregate patterns</li>
+                    <li>Writes versioned skill files: <code>lead-followup-sequence-v2.md</code></li>
+                    <li>Skill registry with version control and rollback capability</li>
+                    <li>Client agents pull new skills on next conversation start</li>
+                    <li>Example: "3-touch follow-up in 72hrs increases close rate 40%" → pushed to all home service agents</li>
+                </ul>
+                <span class="phase-status future">◌ Planned — July 2026</span>
+            </div>
+
+            <!-- PHASE 5 -->
+            <div class="phase-card">
+                <div class="phase-num">Phase 05</div>
+                <div class="phase-title">The Benchmark Product</div>
+                <div class="phase-desc">The intelligence becomes a client-facing product feature — giving every client a view of how they compare to anonymous peers in their industry. This is the moat made visible.</div>
+                <ul class="phase-items">
+                    <li>New dashboard section: "How do I compare?"</li>
+                    <li>Benchmarks: close rate vs industry median, response time vs top performers, ROAS vs similar spend</li>
+                    <li>Actionable gap analysis: "You close 28% vs industry average 41% — here's why"</li>
+                    <li>Becomes a standalone sales tool: show prospects what top performers look like</li>
+                    <li>Requires 10+ clients per industry vertical for statistical validity</li>
+                </ul>
+                <span class="phase-status future">◌ Planned — Q3 2026</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- 5 — THE COMPETITIVE MOAT          -->
+    <!-- ══════════════════════════════════ -->
+    <div class="section" id="s5">
+        <div class="section-label">Section 05</div>
+        <h2>The Competitive Moat</h2>
+
+        <h3>Why this can't be replicated quickly</h3>
+        <p>Any competitor can build a chat interface in 2 weeks. They cannot replicate 2 years of real client data, learned skills, and industry patterns. The moat is not the software — it's the accumulated intelligence that only exists because real clients used the system over time.</p>
+
+        <div class="moat-row">
+            <div class="moat-card">
+                <div class="moat-card-title">The Network Effect</div>
+                <p>Every new client makes every other client's agent smarter. Their anonymized patterns contribute to the Master Brain, which pushes better skills to all agents. A 50-client AuraFlow is fundamentally more intelligent than a 5-client AuraFlow.</p>
+            </div>
+            <div class="moat-card">
+                <div class="moat-card-title">The Switching Cost</div>
+                <p>A client who leaves AuraFlow after 12 months loses their agent's entire memory — 12 months of learned preferences, conversation history, and business-specific skills. Starting over with any other tool means starting from zero.</p>
+            </div>
+            <div class="moat-card">
+                <div class="moat-card-title">The Data Advantage</div>
+                <p>Industry benchmarks built from real small business data don't exist anywhere. Angi, Google, and CRM vendors have transaction data. AuraFlow has reasoning data — what decisions led to what outcomes for which business profiles.</p>
+            </div>
+            <div class="moat-card">
+                <div class="moat-card-title">The Skill Library</div>
+                <p>By Phase 4, AuraFlow has a library of proven, real-world playbooks for home services, construction, law, healthcare, and every other vertical we serve. These are written by AI from actual results — not hypotheses from consultants.</p>
+            </div>
+        </div>
+
+        <h3>The compounding curve</h3>
+        <div class="diagram">
+ 10 clients  →  Basic patterns, early skill development
+ 50 clients  →  Industry-specific playbooks, reliable benchmarks
+200 clients  →  AuraFlow knows more about SMB lead conversion than any consultant alive
+500 clients  →  The data moat is unbreakable. Years to replicate.
+
+Value per client compounds ───────────────────────────────────→
+              Month 1   Month 3   Month 6   Month 12   Month 24
+              Generic   Familiar  Expert    Indispens. Irreplaceable</div>
+
+        <div class="callout ok">
+            <span class="callout-icon">✓</span>
+            <p>The business that can't be replicated isn't built with better code. It's built with more time, more real data, and more compounded learning. AuraFlow's architecture is designed to accumulate all three.</p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- 6 — TECH STACK                    -->
+    <!-- ══════════════════════════════════ -->
+    <div class="section" id="s6">
+        <div class="section-label">Section 06</div>
+        <h2>Current Tech Stack</h2>
+
+        <div class="stack-row">
+            <span class="stack-label">Client App</span>
+            <span class="stack-val"><strong>Next.js 14</strong> (App Router, Server Components) · TypeScript · Tailwind CSS · PWA via next-pwa · Deployed on Vercel</span>
+        </div>
+        <div class="stack-row">
+            <span class="stack-label">Database</span>
+            <span class="stack-val"><strong>Supabase</strong> (PostgreSQL + Auth + Realtime + RLS) · Project: bfzdcyuyilesubtgbhdc · 14 tables · Multi-tenant via client_id isolation</span>
+        </div>
+        <div class="stack-row">
+            <span class="stack-label">AI Model</span>
+            <span class="stack-val"><strong>Anthropic Claude</strong> (claude-sonnet-4) · Streaming responses · Intelligence bridge for background analysis · Preference extraction</span>
+        </div>
+        <div class="stack-row">
+            <span class="stack-label">Agent Framework</span>
+            <span class="stack-val"><strong>Hermes</strong> (NousResearch) · Docker on Railway · OpenAI-compatible HTTP API · Per-client session memory · Autonomous skill creation</span>
+        </div>
+        <div class="stack-row">
+            <span class="stack-label">Agent Hosting</span>
+            <span class="stack-val"><strong>Railway</strong> · Docker containers · Persistent volumes for SQLite + Skills · ~$15-20/mo per client agent</span>
+        </div>
+        <div class="stack-row">
+            <span class="stack-label">Automation</span>
+            <span class="stack-val"><strong>n8n Cloud</strong> · 5 base workflows (Leads, Metrics, Agents, Notifications, Content) · Duplicated per client · Webhook-based integration</span>
+        </div>
+        <div class="stack-row">
+            <span class="stack-label">State Management</span>
+            <span class="stack-val"><strong>Zustand</strong> (global) · React hooks (local) · Supabase Realtime (live feeds)</span>
+        </div>
+        <div class="stack-row">
+            <span class="stack-label">Rate Limiting</span>
+            <span class="stack-val"><strong>Upstash Redis</strong> · REST API · Free tier (auraflow-db on AWS us-east-1)</span>
+        </div>
+        <div class="stack-row">
+            <span class="stack-label">Push Notifications</span>
+            <span class="stack-val"><strong>Web Push / VAPID</strong> · Service worker · Per-client subscriptions in Supabase</span>
+        </div>
+        <div class="stack-row">
+            <span class="stack-label">Live App</span>
+            <span class="stack-val"><strong>https://app.auraflowusa.com</strong> · GitHub: Auraflow26/auraflow-client-app</span>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- 7 — TIMELINE                      -->
+    <!-- ══════════════════════════════════ -->
+    <div class="section" id="s7">
+        <div class="section-label">Section 07</div>
+        <h2>Timeline &amp; Milestones</h2>
+
+        <div class="timeline">
+            <div class="milestone">
+                <div class="milestone-dot active"></div>
+                <div class="milestone-date">April 2026</div>
+                <div class="milestone-content">
+                    <strong>Phase 1 — Individual Client Agents</strong>
+                    <span>Hermes on Railway wired to AuraFlow app. First client agents live. Persistent memory per client. Multi-step reasoning active.</span>
+                </div>
+            </div>
+            <div class="milestone">
+                <div class="milestone-dot future"></div>
+                <div class="milestone-date">May 2026</div>
+                <div class="milestone-content">
+                    <strong>Phase 2 — Anonymous Telemetry Pipeline</strong>
+                    <span>Nightly n8n aggregation job. aggregate_insights table. Privacy boundary enforced. First cross-client patterns visible.</span>
+                </div>
+            </div>
+            <div class="milestone">
+                <div class="milestone-dot future"></div>
+                <div class="milestone-date">June 2026</div>
+                <div class="milestone-content">
+                    <strong>Phase 3 — AuraFlow Master Brain</strong>
+                    <span>Dedicated internal Hermes instance. Foundation Score powered by real data. Industry benchmarks generated. Requires 10+ active clients.</span>
+                </div>
+            </div>
+            <div class="milestone">
+                <div class="milestone-dot future"></div>
+                <div class="milestone-date">July 2026</div>
+                <div class="milestone-content">
+                    <strong>Phase 4 — Skill Distribution System</strong>
+                    <span>Master Brain writes and versions skills. Skill registry built. All client agents receive proven playbooks automatically.</span>
+                </div>
+            </div>
+            <div class="milestone">
+                <div class="milestone-dot future"></div>
+                <div class="milestone-date">Q3 2026</div>
+                <div class="milestone-content">
+                    <strong>Phase 5 — Benchmark Product</strong>
+                    <span>Client-facing "How do I compare?" dashboard. Industry performance benchmarks. Gap analysis with actionable recommendations. Requires 10+ clients per vertical.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- 8 — WHAT WE NEED                  -->
+    <!-- ══════════════════════════════════ -->
+    <div class="section" id="s8">
+        <div class="section-label">Section 08</div>
+        <h2>What We Need to Execute</h2>
+
+        <h3>Infrastructure Budget</h3>
+        <table class="doc-table">
+            <thead>
+                <tr><th>Item</th><th>Cost</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="hl">Railway — per client agent</td>
+                    <td>~$15-20/mo</td>
+                    <td>Docker container + persistent volume. Scales linearly with clients.</td>
+                </tr>
+                <tr>
+                    <td class="hl">Anthropic API</td>
+                    <td>~$0.50-2/client/mo</td>
+                    <td>Scales with conversation volume. Claude Sonnet pricing.</td>
+                </tr>
+                <tr>
+                    <td class="hl">Supabase</td>
+                    <td>$25/mo (Pro)</td>
+                    <td>Covers all clients. Upgrade at 500MB database size.</td>
+                </tr>
+                <tr>
+                    <td class="hl">n8n Cloud</td>
+                    <td>$20/mo</td>
+                    <td>Starter plan. Covers all current workflows.</td>
+                </tr>
+                <tr>
+                    <td class="hl">Vercel</td>
+                    <td>$20/mo (Pro)</td>
+                    <td>Covers all deploys. Edge functions included.</td>
+                </tr>
+                <tr>
+                    <td class="hl">Upstash Redis</td>
+                    <td>$0/mo</td>
+                    <td>Free tier sufficient through Phase 3.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Client Thresholds</h3>
+        <ul>
+            <li><strong>Phase 1:</strong> Works with 1 client. Currently active: RC Generators &amp; Electric.</li>
+            <li><strong>Phase 2:</strong> Works with 3+ clients. Patterns start forming.</li>
+            <li><strong>Phase 3:</strong> Requires 10+ active clients for statistically meaningful Master Brain.</li>
+            <li><strong>Phase 5:</strong> Requires 10+ clients per industry vertical for valid benchmarks.</li>
+        </ul>
+
+        <h3>Team Requirements</h3>
+        <p>No additional engineering hires required through Phase 3. Current architecture is fully manageable by 1 developer. Phase 4 (Skill Distribution) and Phase 5 (Benchmark Product) may benefit from a second engineer but are not blocked without one.</p>
+
+        <h3>The Critical Path</h3>
+        <p>The only thing that gates Phase 3, 4, and 5 is <strong>client count</strong>. The technology is already designed and partially built. Getting to 10 active clients is the most important milestone between now and the full intelligence system becoming operational.</p>
+
+        <div class="callout gold">
+            <span class="callout-icon">◆</span>
+            <p><strong>The north star metric:</strong> Active clients with a Hermes agent running and at least 30 days of conversation history. Every client past that threshold is a compounding asset — not just revenue.</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Smooth scroll for TOC
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        e.preventDefault()
+        const t = document.querySelector(a.getAttribute('href'))
+        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+})
+</script>
+</body>
+</html>

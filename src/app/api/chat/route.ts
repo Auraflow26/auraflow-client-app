@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import { getClientContext, extractAndSavePreferences } from '@/lib/intelligence/bridge'
+import { getClientContext, getConversationSummary, extractAndSavePreferences } from '@/lib/intelligence/bridge'
 import type { ClientProfile, DailyMetrics, Lead, AgentActivity, ChatMessage } from '@/lib/types'
 
 export const runtime = 'nodejs'
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
           .select('*')
           .eq('client_id', profile.client_id)
           .order('created_at', { ascending: true })
-          .limit(20)
+          .limit(40)
           .returns<ChatMessage[]>(),
       ])
 
@@ -84,37 +84,35 @@ export async function POST(request: Request) {
     const avgRating = latestMetric?.avg_review_score ?? null
     const foundationScore = latestMetric?.foundation_score ?? profile.foundation_score
 
-    // Fetch client context memory (long-term preferences)
-    const clientContext = await getClientContext(supabase, profile.client_id)
+    // Fetch client memory and conversation summary in parallel
+    const [clientContext, conversationSummary] = await Promise.all([
+      getClientContext(supabase, profile.client_id),
+      getConversationSummary(supabase, profile.client_id),
+    ])
 
-    const systemPrompt = `You are AuraFlow Intelligence — the AI assistant for ${profile.business_name}, a ${profile.industry ?? 'business'} (${profile.employee_count ?? 'unspecified size'}).
+    const systemPrompt = `You are AuraFlow Intelligence — the dedicated AI advisor for ${profile.business_name}, a ${profile.industry ?? 'business'} with ${profile.employee_count ?? 'an unspecified'} team size.
 
-CURRENT METRICS (last 30 days):
-- Leads captured: ${agg.leads}
-- Leads won: ${agg.won}
-- Close rate: ${agg.leads > 0 ? ((agg.won / agg.leads) * 100).toFixed(1) : 'n/a'}%
-- Avg response time: ${avgResponse ?? 'n/a'} seconds
-- Ad spend: $${agg.adSpend.toFixed(2)} | Revenue attributed: $${agg.adRevenue.toFixed(2)}
-- ROAS: ${agg.adSpend > 0 ? (agg.adRevenue / agg.adSpend).toFixed(2) : 'n/a'}x
-- Admin hours saved: ${agg.adminHours.toFixed(1)}
-- Google reviews: ${totalReviews} total (avg ${avgRating ?? 'n/a'} stars, ${agg.reviewsReceived} new this month)
-- Foundation Score: ${foundationScore ?? 'n/a'}/100
+You have a persistent memory of this client. You remember their preferences, past decisions, and ongoing concerns. Never ask them to repeat something you already know.
+${clientContext ? `\n══ WHAT YOU KNOW ABOUT THIS CLIENT ══\n${clientContext}\n` : ''}${conversationSummary ? `\n══ RECENT CONVERSATION CONTEXT ══\n${conversationSummary}\n` : ''}
+══ LIVE BUSINESS DATA (last 30 days) ══
+Leads captured: ${agg.leads} | Won: ${agg.won} | Close rate: ${agg.leads > 0 ? ((agg.won / agg.leads) * 100).toFixed(1) : 'n/a'}%
+Avg response time: ${avgResponse ?? 'n/a'}s | Ad spend: $${agg.adSpend.toFixed(2)} | Ad revenue: $${agg.adRevenue.toFixed(2)} | ROAS: ${agg.adSpend > 0 ? (agg.adRevenue / agg.adSpend).toFixed(2) : 'n/a'}x
+Admin hours saved: ${agg.adminHours.toFixed(1)} | Reviews: ${totalReviews} total, avg ${avgRating ?? 'n/a'}★, ${agg.reviewsReceived} new this month
+Foundation Score: ${foundationScore ?? 'n/a'}/100
 
-RECENT LEADS (most recent first):
-${(leads ?? []).map((l) => `- ${l.lead_name} (id:${l.id}): ${l.service_type}, $${l.estimated_value}, score ${l.lead_score}, source ${l.source}, status ${l.status}`).join('\n') || '- (none yet)'}
+RECENT LEADS:
+${(leads ?? []).map((l) => `- ${l.lead_name}: ${l.service_type}, $${l.estimated_value}, score ${l.lead_score}, source ${l.source}, status ${l.status}`).join('\n') || '- (none yet)'}
 
 RECENT AGENT ACTIVITY:
-${(activity ?? []).slice(0, 15).map((a) => `- ${a.agent_name}: ${a.action}${a.details ? ' — ' + a.details : ''}`).join('\n') || '- (none yet)'}
-${clientContext ? `\nCLIENT PREFERENCES (remembered from past conversations):\n${clientContext}` : ''}
+${(activity ?? []).slice(0, 12).map((a) => `- ${a.agent_name}: ${a.action}${a.details ? ' — ' + a.details : ''}`).join('\n') || '- (none yet)'}
 
 RULES:
-- Always ground responses in the actual data above. Never fabricate numbers.
-- If the data doesn't contain what the user asked, say so honestly.
-- When recommending changes, note they require advisor approval.
-- Keep responses concise and actionable — this is a mobile interface. 2-4 short paragraphs max.
-- Use plain English a non-technical business owner understands.
-- Reference specific data points when answering performance questions.
-- Respect all client preferences listed above — apply them to tone, style, and content.`
+- You remember this client. Use that memory actively — reference past topics, honor stated preferences.
+- Ground every answer in the real data above. Never fabricate numbers.
+- If data is missing, say so honestly.
+- Responses must be concise — 2-4 short paragraphs max. This is a mobile interface.
+- Use plain English. No jargon. Speak like a trusted advisor, not a dashboard.
+- Significant changes require advisor approval — note this when relevant.`
 
     const prior = (history ?? []).map((m) => ({
       role: m.role as 'user' | 'assistant',
