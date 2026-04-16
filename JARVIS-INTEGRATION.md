@@ -22,6 +22,11 @@ JARVIS_ADMIN_EMAILS=mo@auraflowusa.com
 
 # ElevenLabs agent ID for the voice widget (defaults to Cyrus AF)
 NEXT_PUBLIC_ELEVENLABS_AGENT_ID=agent_1001knww7wwafyqtrnbk1q6ev143
+
+# Shared secret between ElevenLabs and our /api/elevenlabs/llm endpoint.
+# Generate with: openssl rand -hex 32
+# Paste the SAME value into the agent's Custom LLM "Authorization Header" field.
+ELEVENLABS_LLM_SECRET=
 ```
 
 The Supabase env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are already set up — the Jarvis route reuses them.
@@ -40,11 +45,35 @@ Apply [javaris/supabase/schema.sql](https://github.com/Auraflow26/javaris/blob/m
 
 ## Voice widget
 
-The embedded ElevenLabs widget connects to your existing "Cyrus AF" agent. Tools the agent can call (status, dispatch, etc.) are configured in the [ElevenLabs dashboard](https://elevenlabs.io/app/conversational-ai/agents) — they POST to webhooks you can host on this app under `/api/jarvis/tools/*` (next iteration).
+The embedded ElevenLabs widget connects to your existing "Cyrus AF" agent. The agent talks to this app's `/api/elevenlabs/llm` endpoint as a Custom LLM (see below).
+
+## Custom LLM endpoint — `/api/elevenlabs/llm`
+
+Receives ElevenLabs's OpenAI-format chat requests, routes them through Anthropic Claude with the Jarvis tool catalog, and streams the answer back as OpenAI SSE.
+
+**Tools the voice agent can call** (defined in `src/lib/jarvis/tools.ts`):
+
+| Tool | Effect |
+|------|--------|
+| `get_status` | Reads daemon liveness, pending tasks, awaiting approvals, completed today |
+| `queue_command` | Inserts a `kind=exec` task — risky ones flip to `awaiting_approval` |
+| `dispatch_agents` | Queues `dispatch_tasks.sh` execution (optionally scoped to specific agents) |
+| `collect_outputs` | Queues `collect_outputs.sh` |
+| `run_morning_brief` | Queues `morning_brief.sh --silent` |
+| `list_pending_approvals` | Reads first 5 awaiting tasks |
+| `send_notification` | Inserts a `kind=notify` task → osascript on the daemon |
+
+The tool loop runs entirely server-side. Voice never blocks waiting for shell output — tools queue work and respond "queued"; results stream into the `/jarvis` feed via Realtime.
+
+**Configure in ElevenLabs dashboard** (Cyrus AF agent → LLM → Custom LLM):
+
+- URL: `https://app.auraflowusa.com/api/elevenlabs/llm`
+- Authorization header: `Bearer <ELEVENLABS_LLM_SECRET>` (paste the same value you put in `.env.local`)
+- Model: `claude-sonnet-4-5-20250929` (or whatever — the endpoint maps any model name to a Claude model)
 
 ## Not yet built
 
-- `/api/jarvis/tools/*` endpoints for ElevenLabs to call
-- Push notification when an approval lands
 - Per-task drill-down page with full streaming logs
+- Push notification when an approval lands
 - Multi-tenant scoping (today's RLS is "admin sees everything")
+- Streaming tool execution status during the voice turn
