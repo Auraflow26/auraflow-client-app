@@ -26,7 +26,15 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
-  const isPublic = path.startsWith('/login') || path.startsWith('/auth')
+  const isPublic =
+    path.startsWith('/login') ||
+    path.startsWith('/auth') ||
+    // Webhook + external integration routes carry their own auth and
+    // must not be redirected to /login when hit anonymously.
+    path.startsWith('/api/elevenlabs/') ||
+    path.startsWith('/api/webhooks/') ||
+    path.startsWith('/api/admin/') ||
+    path.startsWith('/api/push/')
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
