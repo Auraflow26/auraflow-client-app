@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   }
 
   const wantsStream = body.stream !== false
-  const requestedModel = body.model ?? 'claude-sonnet-4-5-20250929'
+  const requestedModel = body.model ?? 'claude-sonnet-4-6'
   const model = mapModel(requestedModel)
 
   // Translate OpenAI messages → Anthropic format. Keep system prompt as the
@@ -84,6 +84,7 @@ export async function POST(request: Request) {
   let lastResponse: Anthropic.Message | null = null
   const conversationMessages: Anthropic.MessageParam[] = [...messages]
 
+  try {
   for (let hop = 0; hop < 3; hop++) {
     lastResponse = await client.messages.create({
       model,
@@ -139,6 +140,16 @@ export async function POST(request: Request) {
     finalText = 'Acknowledged.'
   }
 
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    const status = (err as { status?: number }).status ?? 500
+    console.error('[elevenlabs-llm] Anthropic error:', msg)
+    return new Response(
+      JSON.stringify({ error: { message: msg, type: 'api_error' } }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
   const completionId = `cmpl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
   if (wantsStream) {
@@ -163,10 +174,9 @@ function errResp(message: string, status: number) {
 // Translate OpenAI-style model names to Claude models.
 function mapModel(requested: string): string {
   if (requested.startsWith('claude-')) return requested
-  // ElevenLabs may default to gpt-* — pick a sensible Claude equivalent.
-  if (requested.includes('gpt-4o') || requested.includes('gpt-4')) return 'claude-sonnet-4-5-20250929'
+  if (requested.includes('gpt-4o') || requested.includes('gpt-4')) return 'claude-sonnet-4-6'
   if (requested.includes('gpt-3.5')) return 'claude-haiku-4-5-20251001'
-  return 'claude-sonnet-4-5-20250929'
+  return 'claude-sonnet-4-6'
 }
 
 function buildNonStreamResponse(
