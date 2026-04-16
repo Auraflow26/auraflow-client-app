@@ -1,4 +1,9 @@
-// POST /api/elevenlabs/llm — Custom LLM endpoint for the ElevenLabs Cyrus AF agent.
+// POST /api/elevenlabs/llm/chat/completions — Custom LLM endpoint for ElevenLabs.
+//
+// ElevenLabs auto-appends /chat/completions to whatever base URL is configured
+// (standard OpenAI-client behavior). Configure the agent's Custom LLM URL as:
+//   https://app.auraflowusa.com/api/elevenlabs/llm   (NO suffix)
+// and ElevenLabs will POST to this file.
 //
 // Receives OpenAI-format chat completion requests from ElevenLabs.
 // Routes them to Anthropic Claude with the Jarvis tool catalog.
