@@ -28,17 +28,22 @@ You have tools available. Use them when Mo asks for status, dispatching agents, 
 When you queue work, confirm naturally — "I have queued that" or "Dispatched to Orion" — never describe the implementation.`
 
 export async function POST(request: Request) {
-  // Auth check
-  const authHeader = request.headers.get('authorization') ?? ''
-  const expected = `Bearer ${process.env.ELEVENLABS_LLM_SECRET ?? ''}`
-  if (!process.env.ELEVENLABS_LLM_SECRET || authHeader !== expected) {
+  // Defensively trim env vars — dashboard pastes often include a trailing \n
+  // which breaks HTTP header construction in downstream SDKs.
+  const anthropicKey = (process.env.ANTHROPIC_API_KEY ?? '').trim()
+  const expectedSecret = (process.env.ELEVENLABS_LLM_SECRET ?? '').trim()
+
+  // Auth check — accept either exact-match or a trimmed incoming header.
+  const authHeader = (request.headers.get('authorization') ?? '').trim()
+  const expected = `Bearer ${expectedSecret}`
+  if (!expectedSecret || authHeader !== expected) {
     return new Response(JSON.stringify({ error: { message: 'unauthorized', type: 'invalid_request_error' } }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     })
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!anthropicKey) {
     return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY not set on server', type: 'server_error' } }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -72,7 +77,7 @@ export async function POST(request: Request) {
     return errResp('messages array empty after filtering', 400)
   }
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+  const client = new Anthropic({ apiKey: anthropicKey })
 
   // Multi-turn tool loop — up to 3 hops to keep latency bounded.
   let finalText = ''
