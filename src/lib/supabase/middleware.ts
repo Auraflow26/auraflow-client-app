@@ -35,7 +35,8 @@ export async function updateSession(request: NextRequest) {
     path.startsWith('/api/webhooks/') ||
     path.startsWith('/api/admin/') ||
     path.startsWith('/api/push/') ||
-    path.startsWith('/talk')
+    path.startsWith('/talk') ||
+    path.startsWith('/station')
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
