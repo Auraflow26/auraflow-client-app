@@ -34,7 +34,8 @@ export async function updateSession(request: NextRequest) {
     path.startsWith('/api/elevenlabs/') ||
     path.startsWith('/api/webhooks/') ||
     path.startsWith('/api/admin/') ||
-    path.startsWith('/api/push/')
+    path.startsWith('/api/push/') ||
+    path.startsWith('/talk')
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
